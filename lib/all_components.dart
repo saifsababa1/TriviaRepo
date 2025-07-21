@@ -4,6 +4,7 @@ import 'play_button.dart';
 import 'next_button.dart';
 import 'continue_button.dart';
 import 'custom_icons.dart';
+import 'star_coin.dart';
 
 class AllComponentsPreview extends StatefulWidget {
   const AllComponentsPreview({super.key});
@@ -299,6 +300,9 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview> {
                 const SizedBox(height: 32),
                 // Custom icons row
                 const CustomIconsRow(),
+                const SizedBox(height: 32),
+                // Star coins credit system
+                const GameCreditSystem(),
                 const SizedBox(height: 20),
               ],
             ),
