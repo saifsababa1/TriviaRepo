@@ -1,0 +1,409 @@
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class BottomNavBar extends StatefulWidget {
+  final int currentIndex;
+  final Function(int) onTap;
+
+  const BottomNavBar({
+    super.key,
+    required this.currentIndex,
+    required this.onTap,
+  });
+
+  @override
+  State<BottomNavBar> createState() => _BottomNavBarState();
+}
+
+class _BottomNavBarState extends State<BottomNavBar>
+    with TickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
+  late AnimationController _indicatorController;
+  late Animation<double> _indicatorAnimation;
+  int _pressedIndex = -1;
+
+  // Swipe detection variables
+  double _swipeStartX = 0;
+  bool _isSwipeInProgress = false;
+  static const double _swipeThreshold = 50.0; // Minimum distance for swipe
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 120), // Faster for responsiveness
+      vsync: this,
+    );
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 0.98, // Subtle press effect
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
+    // Much faster indicator animation
+    _indicatorController = AnimationController(
+      duration: const Duration(milliseconds: 350), // Faster navigation
+      vsync: this,
+    );
+    _indicatorAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _indicatorController,
+        curve: Curves.easeInOutCubic,
+      ),
+    );
+  }
+
+  @override
+  void didUpdateWidget(BottomNavBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.currentIndex != widget.currentIndex) {
+      _indicatorController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    _indicatorController.dispose();
+    super.dispose();
+  }
+
+  void _onItemPressed(int index) {
+    setState(() {
+      _pressedIndex = index;
+    });
+
+    _animationController.forward().then((_) {
+      _animationController.reverse();
+      setState(() {
+        _pressedIndex = -1;
+      });
+    });
+
+    HapticFeedback.lightImpact();
+    widget.onTap(index);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onPanStart: (details) {
+        _swipeStartX = details.globalPosition.dx;
+        _isSwipeInProgress = true;
+      },
+      onPanUpdate: (details) {
+        if (!_isSwipeInProgress) return;
+
+        double currentX = details.globalPosition.dx;
+        double deltaX = currentX - _swipeStartX;
+
+        // Only process significant movements
+        if (deltaX.abs() > 10) {
+          // Visual feedback during swipe (optional - can add indicator movement)
+        }
+      },
+      onPanEnd: (details) {
+        if (!_isSwipeInProgress) return;
+
+        double currentX = details.globalPosition.dx;
+        double deltaX = currentX - _swipeStartX;
+        double velocity = details.velocity.pixelsPerSecond.dx;
+
+        // Reset swipe state
+        _isSwipeInProgress = false;
+
+        // Determine swipe direction and threshold
+        bool shouldSwipe = false;
+        int direction = 0;
+
+        if (deltaX > _swipeThreshold || velocity > 500) {
+          // Swipe right - go to previous item
+          direction = -1;
+          shouldSwipe = true;
+        } else if (deltaX < -_swipeThreshold || velocity < -500) {
+          // Swipe left - go to next item
+          direction = 1;
+          shouldSwipe = true;
+        }
+
+        if (shouldSwipe) {
+          _handleSwipe(direction);
+        }
+      },
+      onPanCancel: () {
+        _isSwipeInProgress = false;
+      },
+      child: Container(
+        height: 85,
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(25),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFFFFF), Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
+          ),
+          boxShadow: [
+            // Main shadow for depth
+            BoxShadow(
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
+              spreadRadius: 0,
+            ),
+            // Inner highlight
+            BoxShadow(
+              color: Colors.white.withOpacity(0.8),
+              blurRadius: 1,
+              offset: const Offset(0, -1),
+              spreadRadius: 0,
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(25),
+          child: Stack(
+            children: [
+              // Full coverage sliding indicator
+              AnimatedBuilder(
+                animation: _indicatorAnimation,
+                builder: (context, child) {
+                  return AnimatedPositioned(
+                    duration: const Duration(milliseconds: 400),
+                    curve: Curves.easeInOutCubic,
+                    left:
+                        (MediaQuery.of(context).size.width - 32) /
+                        4 *
+                        widget.currentIndex,
+                    top: 0,
+                    bottom: 0,
+                    width: (MediaQuery.of(context).size.width - 32) / 4,
+                    child: Container(
+                      margin: EdgeInsets.zero,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(25),
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            _getCurrentColor().withOpacity(0.3),
+                            _getCurrentColor().withOpacity(0.2),
+                            _getCurrentColor().withOpacity(0.1),
+                          ],
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _getCurrentColor().withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              ),
+
+              // Navigation items
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(
+                    0,
+                    Icons.home_rounded,
+                    'HOME',
+                    const Color(0xFF4CAF50),
+                  ),
+                  _buildNavItem(
+                    1,
+                    Icons.emoji_events,
+                    'AWARDS',
+                    const Color(0xFFFFD700),
+                  ),
+                  _buildNavItem(
+                    2,
+                    Icons.casino,
+                    'LUCKY\nWHEEL',
+                    const Color(0xFF00BCD4),
+                  ),
+                  _buildNavItem(
+                    3,
+                    Icons.settings,
+                    'SETTINGS',
+                    const Color(0xFF9C27B0),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _handleSwipe(int direction) {
+    int newIndex = widget.currentIndex + direction;
+
+    // Check boundaries
+    if (newIndex >= 0 && newIndex <= 3) {
+      HapticFeedback.lightImpact(); // Haptic feedback for swipe
+      widget.onTap(newIndex);
+    } else {
+      // Boundary reached - provide different haptic feedback
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  Widget _buildNavItem(int index, IconData icon, String label, Color color) {
+    final isSelected = widget.currentIndex == index;
+    final isPressed = _pressedIndex == index;
+
+    return Expanded(
+      child: AnimatedBuilder(
+        animation: _scaleAnimation,
+        builder: (context, child) {
+          return Transform.scale(
+            scale: isPressed ? _scaleAnimation.value : 1.0,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _onItemPressed(index),
+                onTapDown: (_) {
+                  setState(() {
+                    _pressedIndex = index;
+                  });
+                  _animationController.forward();
+                },
+                onTapUp: (_) {
+                  Future.delayed(const Duration(milliseconds: 50), () {
+                    if (mounted) _animationController.reverse();
+                  });
+                },
+                onTapCancel: () {
+                  setState(() {
+                    _pressedIndex = -1;
+                  });
+                  _animationController.reverse();
+                },
+                splashColor: color.withOpacity(0.1), // Subtle splash effect
+                highlightColor: color.withOpacity(0.05), // Subtle highlight
+                borderRadius: BorderRadius.circular(
+                  25,
+                ), // Match container radius
+                child: Container(
+                  height: double.infinity,
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 8,
+                  ), // Internal padding only
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Icon container with perfect sizing
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        width: isSelected ? 48 : 42,
+                        height: isSelected ? 48 : 42,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient:
+                              isSelected
+                                  ? LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      color.withOpacity(0.9),
+                                      color.withOpacity(0.7),
+                                      color.withOpacity(0.5),
+                                    ],
+                                  )
+                                  : LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Colors.grey.withOpacity(0.3),
+                                      Colors.grey.withOpacity(0.2),
+                                      Colors.grey.withOpacity(0.1),
+                                    ],
+                                  ),
+                          boxShadow: [
+                            BoxShadow(
+                              color:
+                                  isSelected
+                                      ? color.withOpacity(0.4)
+                                      : Colors.black.withOpacity(0.1),
+                              blurRadius: isSelected ? 8.0 : 4.0,
+                              offset:
+                                  isSelected
+                                      ? const Offset(0, 3)
+                                      : const Offset(0, 2),
+                              spreadRadius: 0,
+                            ),
+                          ],
+                        ),
+                        child: AnimatedScale(
+                          scale: isPressed ? 0.9 : 1.0,
+                          duration: const Duration(milliseconds: 120),
+                          curve: Curves.easeInOut,
+                          child: Icon(
+                            icon,
+                            color: isSelected ? Colors.white : Colors.grey[600],
+                            size: isSelected ? 24 : 20,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 6),
+
+                      // Text with consistent styling
+                      AnimatedDefaultTextStyle(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        style: GoogleFonts.luckiestGuy(
+                          fontSize: isSelected ? 10 : 9,
+                          color: isSelected ? color : Colors.grey[600],
+                          fontWeight: FontWeight.w600,
+                          height: 1.0,
+                          shadows:
+                              isSelected
+                                  ? [
+                                    Shadow(
+                                      color: Colors.white.withOpacity(0.8),
+                                      blurRadius: 1,
+                                      offset: const Offset(0, 0.5),
+                                    ),
+                                  ]
+                                  : null,
+                        ),
+                        child: Text(label, textAlign: TextAlign.center),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Color _getCurrentColor() {
+    switch (widget.currentIndex) {
+      case 0:
+        return const Color(0xFF4CAF50);
+      case 1:
+        return const Color(0xFFFFD700);
+      case 2:
+        return const Color(0xFF00BCD4);
+      case 3:
+        return const Color(0xFF9C27B0);
+      default:
+        return const Color(0xFF4CAF50);
+    }
+  }
+}
