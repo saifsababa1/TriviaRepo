@@ -9,6 +9,28 @@ import 'custom_icons.dart';
 import 'star_coin.dart';
 import 'bottom_nav_bar.dart'; // Add the new import
 
+// 2. Add the SplashScreen widget at the top (after imports)
+class TriviaSplashScreen extends StatelessWidget {
+  const TriviaSplashScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => Navigator.of(context).pop(),
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: SizedBox.expand(
+          child: Image.asset(
+            'assets/images/image.png',
+            fit: BoxFit.cover,
+            alignment: Alignment.center,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class AllComponentsPreview extends StatefulWidget {
   const AllComponentsPreview({super.key});
 
@@ -403,6 +425,32 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     return Column(
       key: const ValueKey('home'),
       children: [
+        // Splash Button
+        Padding(
+          padding: const EdgeInsets.only(bottom: 20.0),
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
+              backgroundColor: const Color(0xFF7B3EFF),
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(18),
+              ),
+              elevation: 8,
+              shadowColor: Colors.deepPurple.withOpacity(0.3),
+              textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.2),
+            ),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => const TriviaSplashScreen(),
+                  fullscreenDialog: true,
+                ),
+              );
+            },
+            child: const Text('Show Trivia Master Splash'),
+          ),
+        ),
         // Buttons Row 1
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
