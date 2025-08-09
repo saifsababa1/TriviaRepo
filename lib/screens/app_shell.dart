@@ -1,17 +1,13 @@
-// lib/all_components.dart
+// lib/screens/app_shell.dart - Updated imports and navigation
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../widgets/play_button.dart';
-import '../widgets/continue_button.dart';
-import '../widgets/next_button.dart';
-import '../widgets/custom_icons_row.dart';
 import '../widgets/star_coin.dart';
-import '../widgets/bottom_nav_bar.dart'; // Add the new import
+import '../widgets/bottom_nav_bar.dart';
 import 'home_screen.dart';
 import 'trivia_screen.dart';
 import 'leaderboard_screen.dart';
-import 'spin_screen.dart';
+import 'enhanced_spin_screen.dart'; // Add this import
 import 'awards_screen.dart';
 
 class AllComponentsPreview extends StatefulWidget {
@@ -30,8 +26,6 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
 
   // Enhanced animation controllers for smooth mobile-like transitions
   late AnimationController _pageTransitionController;
-  late Animation<double> _fadeAnimation;
-  late Animation<Offset> _slideAnimation;
   late AnimationController _pageSlideController;
   late Animation<Offset> _currentPageSlide;
   late Animation<Offset> _nextPageSlide;
@@ -44,23 +38,6 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     _pageTransitionController = AnimationController(
       duration: const Duration(milliseconds: 300), // Faster, mobile-like
       vsync: this,
-    );
-
-    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(
-        parent: _pageTransitionController,
-        curve: Curves.easeInOut,
-      ),
-    );
-
-    _slideAnimation = Tween<Offset>(
-      begin: const Offset(0.15, 0), // Subtle slide effect
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _pageTransitionController,
-        curve: Curves.easeOutCubic,
-      ),
     );
 
     // Mobile-like horizontal page sliding
@@ -185,143 +162,13 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
                   }
                 }
               },
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16.0),
-                child: _currentNavIndex == 2
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          // Animated page indicator with smooth transitions
-                          AnimatedContainer(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                colors: [
-                                  _getPageColor().withOpacity(0.3),
-                                  _getPageColor().withOpacity(0.15),
-                                ],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(25),
-                              border: Border.all(
-                                color: _getPageColor().withOpacity(0.4),
-                                width: 1.5,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _getPageColor().withOpacity(0.2),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: Icon(
-                                    _getPageIcon(),
-                                    key: ValueKey(_currentNavIndex),
-                                    color: _getPageColor(),
-                                    size: 24,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                AnimatedSwitcher(
-                                  duration: const Duration(milliseconds: 300),
-                                  child: Text(
-                                    _getPageTitle(),
-                                    key: ValueKey(_getPageTitle()),
-                                    style: GoogleFonts.luckiestGuy(
-                                      fontSize: 20,
-                                      color: _getPageColor(),
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black.withOpacity(0.3),
-                                          blurRadius: 2,
-                                          offset: const Offset(1, 1),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Animated title with page-specific content
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 400),
-                            child: Text(
-                              _getPageContent(),
-                              key: ValueKey(_getPageTitle()),
-                              style: GoogleFonts.luckiestGuy(
-                                fontSize: 24,
-                                color: Colors.white,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withOpacity(0.5),
-                                    blurRadius: 3,
-                                    offset: const Offset(2, 2),
-                                  ),
-                                ],
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-
-                          const SizedBox(height: 24),
-
-                          // Star Credits System (always visible)
-                          const GameCreditSystem(),
-
-                          const SizedBox(height: 32),
-
-                          // Mobile-like sliding page content
-                          SizedBox(
-                            height: 400, // Fixed height for smooth sliding
-                            child: Stack(
-                              children: [
-                                // Current page content
-                                AnimatedBuilder(
-                                  animation: _pageSlideController,
-                                  builder: (context, child) {
-                                    return SlideTransition(
-                                      position: _currentPageSlide,
-                                      child: _buildPageContent(),
-                                    );
-                                  },
-                                ),
-
-                                // Next page content (visible during transition)
-                                if (_pageSlideController.isAnimating)
-                                  AnimatedBuilder(
-                                    animation: _pageSlideController,
-                                    builder: (context, child) {
-                                      return SlideTransition(
-                                        position: _nextPageSlide,
-                                        child: _buildPageContent(),
-                                      );
-                                    },
-                                  ),
-                              ],
-                            ),
-                          ),
-
-                          const SizedBox(height: 100), // Space for bottom nav
-                        ],
-                      )
-                    : const SizedBox.shrink(),
-              ),
+              child:
+                  _currentNavIndex == 0
+                      ? _buildPageContent() // Full screen for spin
+                      : SingleChildScrollView(
+                        padding: const EdgeInsets.all(16.0),
+                        child: _buildNonSpinContent(),
+                      ),
             ),
           ),
           // Beautiful 3D Bottom Navigation Bar
@@ -407,10 +254,11 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     }
   }
 
+  // UPDATED: This is the key method that was causing the empty page
   Widget _buildPageContent() {
     switch (_currentNavIndex) {
       case 0:
-        return const SpinScreen();
+        return const EnhancedSpinScreen(); // Changed from SpinScreen to EnhancedSpinScreen
       case 1:
         return const LeaderboardScreen();
       case 2:
@@ -432,39 +280,136 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     }
   }
 
-  // Helper methods for navigation feedback
-  String _getPageTitleForIndex(int index) {
-    switch (index) {
-      case 0:
-        return 'Lucky Wheel';
-      case 1:
-        return 'Leaderboard';
-      case 2:
-        return 'Home';
-      case 3:
-        return 'Awards';
-      case 4:
-        return 'Settings';
-      default:
-        return 'Home';
-    }
-  }
+  // Helper method to build non-spin content with proper layout
+  Widget _buildNonSpinContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Animated page indicator with smooth transitions
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [
+                _getPageColor().withOpacity(0.3),
+                _getPageColor().withOpacity(0.15),
+              ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(
+              color: _getPageColor().withOpacity(0.4),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _getPageColor().withOpacity(0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Icon(
+                  _getPageIcon(),
+                  key: ValueKey(_currentNavIndex),
+                  color: _getPageColor(),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 300),
+                child: Text(
+                  _getPageTitle(),
+                  key: ValueKey(_getPageTitle()),
+                  style: GoogleFonts.luckiestGuy(
+                    fontSize: 20,
+                    color: _getPageColor(),
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 2,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
 
-  Color _getPageColorForIndex(int index) {
-    switch (index) {
-      case 0:
-        return const Color(0xFF00BCD4); // Spin
-      case 1:
-        return const Color(0xFFFFD700); // Leaderboard
-      case 2:
-        return const Color(0xFF4CAF50); // Home
-      case 3:
-        return const Color(0xFFFFA500); // Awards
-      case 4:
-        return const Color(0xFF9C27B0); // Settings
-      default:
-        return const Color(0xFF4CAF50);
-    }
+        const SizedBox(height: 24),
+
+        // Animated title with page-specific content
+        AnimatedSwitcher(
+          duration: const Duration(milliseconds: 400),
+          child: Text(
+            _getPageContent(),
+            key: ValueKey(_getPageTitle()),
+            style: GoogleFonts.luckiestGuy(
+              fontSize: 24,
+              color: Colors.white,
+              shadows: [
+                Shadow(
+                  color: Colors.black.withOpacity(0.5),
+                  blurRadius: 3,
+                  offset: const Offset(2, 2),
+                ),
+              ],
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ),
+
+        const SizedBox(height: 24),
+
+        // Star Credits System (always visible for Home only)
+        if (_currentNavIndex == 2) const GameCreditSystem(),
+        if (_currentNavIndex == 2) const SizedBox(height: 32),
+
+        // Mobile-like sliding page content
+        SizedBox(
+          height: 500,
+          child: Stack(
+            children: [
+              // Current page content
+              AnimatedBuilder(
+                animation: _pageSlideController,
+                builder: (context, child) {
+                  return SlideTransition(
+                    position: _currentPageSlide,
+                    child: _buildPageContent(),
+                  );
+                },
+              ),
+
+              // Next page content (visible during transition)
+              if (_pageSlideController.isAnimating)
+                AnimatedBuilder(
+                  animation: _pageSlideController,
+                  builder: (context, child) {
+                    return SlideTransition(
+                      position: _nextPageSlide,
+                      child: _buildPageContent(),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+
+        const SizedBox(height: 100), // Space for bottom nav
+      ],
+    );
   }
 
   void _handlePageTransition(int newIndex) {
@@ -473,9 +418,6 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
 
     // Determine slide direction based on index change
     bool slidingRight = newIndex > _currentNavIndex;
-
-    // Store the new index for the transition
-    int previousIndex = _currentNavIndex;
 
     // Update slide animations based on direction
     if (slidingRight) {
@@ -531,25 +473,6 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
         _currentNavIndex = newIndex;
       });
       _pageSlideController.reset();
-
-      // Removed SnackBar feedback after navigation to prevent pop-out tab
-      // String pageName = _getPageTitleForIndex(newIndex);
-      // String direction = slidingRight ? '→' : '←';
-      // ScaffoldMessenger.of(context).showSnackBar(
-      //   SnackBar(
-      //     content: Text(
-      //       '$direction $pageName',
-      //       style: GoogleFonts.luckiestGuy(color: Colors.white, fontSize: 14),
-      //     ),
-      //     backgroundColor: _getPageColorForIndex(newIndex),
-      //     duration: const Duration(milliseconds: 500),
-      //     behavior: SnackBarBehavior.floating,
-      //     shape: RoundedRectangleBorder(
-      //       borderRadius: BorderRadius.circular(12),
-      //     ),
-      //     margin: const EdgeInsets.only(bottom: 100, left: 16, right: 16),
-      //   ),
-      // );
     });
   }
 }

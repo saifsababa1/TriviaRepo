@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math' as math;
 
 class StarCoinCredit extends StatelessWidget {
   final double size;
@@ -32,9 +31,7 @@ class StarCoinCredit extends StatelessWidget {
             Container(
               width: size * 0.75,
               height: size * 0.75,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle),
               child: Image.asset(
                 'assets/images/star_coin.png',
                 fit: BoxFit.cover,
@@ -68,10 +65,7 @@ class StarCoinCredit extends StatelessWidget {
                   minWidth: size * 0.3,
                   maxWidth: size * 0.65,
                 ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.92),
                   borderRadius: BorderRadius.circular(14),
