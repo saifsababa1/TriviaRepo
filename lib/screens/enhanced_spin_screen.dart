@@ -4,7 +4,9 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:confetti/confetti.dart';
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import '../services/game_state_service.dart';
+import '../services/image_cache_service.dart';
 import '../widgets/star_coin.dart';
 import '../widgets/custom_icons.dart';
 
@@ -38,7 +40,10 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   int _dailySpinsUsed = 0;
   int _maxDailySpins = 5;
 
-  // Enhanced rewards with better variety
+  // Image cache service
+  final ImageCacheService _imageCache = ImageCacheService();
+
+  // Enhanced rewards with image assets
   final List<SpinReward> _rewards = [
     SpinReward(
       '5 Coins',
@@ -46,6 +51,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       const Color(0xFF4CAF50),
       Icons.monetization_on,
       0.25,
+      'assets/images/5.png',
     ),
     SpinReward(
       '10 Coins',
@@ -53,6 +59,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       const Color(0xFF2196F3),
       Icons.monetization_on,
       0.20,
+      'assets/images/10.png',
     ),
     SpinReward(
       '15 Coins',
@@ -60,6 +67,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       const Color(0xFF9C27B0),
       Icons.monetization_on,
       0.18,
+      'assets/images/15.png',
     ),
     SpinReward(
       '25 Coins',
@@ -67,6 +75,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       const Color(0xFFFF9800),
       Icons.monetization_on,
       0.15,
+      'assets/images/25.png',
     ),
     SpinReward(
       '50 Coins',
@@ -74,15 +83,31 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       const Color(0xFFE91E63),
       Icons.monetization_on,
       0.12,
+      'assets/images/50.png',
     ),
-    SpinReward('100 Coins', 100, const Color(0xFFFFD700), Icons.stars, 0.08),
-    SpinReward('Try Again', 0, const Color(0xFF607D8B), Icons.refresh, 0.01),
+    SpinReward(
+      '100 Coins',
+      100,
+      const Color(0xFFFFD700),
+      Icons.stars,
+      0.08,
+      'assets/images/100.png',
+    ),
+    SpinReward(
+      'Try Again',
+      0,
+      const Color(0xFF607D8B),
+      Icons.refresh,
+      0.01,
+      null,
+    ),
     SpinReward(
       'JACKPOT!',
       500,
       const Color(0xFFFF1744),
       Icons.celebration,
       0.01,
+      'assets/images/jackpot.png',
     ),
   ];
 
@@ -92,6 +117,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     _loadCurrentCoins();
     _initializeAnimations();
     _startAmbientAnimations();
+    // No need to load images here - they're already preloaded!
   }
 
   void _loadCurrentCoins() {
@@ -255,8 +281,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     // Reset particle animation
     _particleController.reset();
 
-    // Allow spinning again after cooldown
-    await Future.delayed(const Duration(seconds: 3));
+    // Allow spinning again immediately
     setState(() {
       _canSpin = true;
     });
@@ -284,33 +309,35 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   void _showDailyLimitDialog() {
     showDialog(
       context: context,
-      builder: (context) => _buildGameDialog(
-        title: 'Daily Limit Reached',
-        icon: Icons.schedule,
-        iconColor: Colors.orange,
-        content:
-            'You\'ve used all $_maxDailySpins daily spins! Come back tomorrow for more chances to win big!',
-        buttonText: 'OK',
-        onPressed: () => Navigator.pop(context),
-      ),
+      builder:
+          (context) => _buildGameDialog(
+            title: 'Daily Limit Reached',
+            icon: Icons.schedule,
+            iconColor: Colors.orange,
+            content:
+                'You\'ve used all $_maxDailySpins daily spins! Come back tomorrow for more chances to win big!',
+            buttonText: 'OK',
+            onPressed: () => Navigator.pop(context),
+          ),
     );
   }
 
   void _showInsufficientCoinsDialog() {
     showDialog(
       context: context,
-      builder: (context) => _buildGameDialog(
-        title: 'Not Enough Coins',
-        icon: Icons.monetization_on,
-        iconColor: Colors.red,
-        content:
-            'You need 10 coins to spin the wheel. Play trivia games to earn more coins!',
-        buttonText: 'Play Trivia',
-        onPressed: () {
-          Navigator.pop(context);
-          // Navigate to trivia game
-        },
-      ),
+      builder:
+          (context) => _buildGameDialog(
+            title: 'Not Enough Coins',
+            icon: Icons.monetization_on,
+            iconColor: Colors.red,
+            content:
+                'You need 10 coins to spin the wheel. Play trivia games to earn more coins!',
+            buttonText: 'Play Trivia',
+            onPressed: () {
+              Navigator.pop(context);
+              // Navigate to trivia game
+            },
+          ),
     );
   }
 
@@ -321,21 +348,24 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _buildGameDialog(
-        title: isJackpot
-            ? 'JACKPOT!'
-            : isBigWin
-                ? 'BIG WIN!'
-                : 'Congratulations!',
-        icon: reward.icon,
-        iconColor: reward.color,
-        content: reward.value > 0
-            ? 'You won ${reward.label}!\n\nTotal Coins: $_currentCoins'
-            : 'Better luck next time! Keep spinning for amazing rewards!',
-        buttonText: 'Awesome!',
-        onPressed: () => Navigator.pop(context),
-        isJackpot: isJackpot,
-      ),
+      builder:
+          (context) => _buildGameDialog(
+            title:
+                isJackpot
+                    ? 'JACKPOT!'
+                    : isBigWin
+                    ? 'BIG WIN!'
+                    : 'Congratulations!',
+            icon: reward.icon,
+            iconColor: reward.color,
+            content:
+                reward.value > 0
+                    ? 'You won ${reward.label}!\n\nTotal Coins: $_currentCoins'
+                    : 'Better luck next time! Keep spinning for amazing rewards!',
+            buttonText: 'Awesome!',
+            onPressed: () => Navigator.pop(context),
+            isJackpot: isJackpot,
+          ),
     );
   }
 
@@ -357,9 +387,10 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: isJackpot
-                ? [const Color(0xFFFFD700), const Color(0xFFFFA500)]
-                : [iconColor.withOpacity(0.8), iconColor],
+            colors:
+                isJackpot
+                    ? [const Color(0xFFFFD700), const Color(0xFFFFA500)]
+                    : [iconColor.withOpacity(0.8), iconColor],
           ),
         ),
         child: Column(
@@ -433,7 +464,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                 _buildHeader(),
                 const SizedBox(height: 20),
 
-                // Enhanced wheel section
+                // Enhanced wheel section - ALWAYS SHOWS IMMEDIATELY
                 Expanded(child: Center(child: _buildEnhancedWheel())),
 
                 // Bottom action section
@@ -581,21 +612,27 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                 boxShadow: [
                   // Large atmospheric glow
                   BoxShadow(
-                    color: const Color(0xFFFFD700).withOpacity(0.15 * _wheelGlowAnimation.value),
+                    color: const Color(
+                      0xFFFFD700,
+                    ).withOpacity(0.15 * _wheelGlowAnimation.value),
                     blurRadius: 80,
                     spreadRadius: 20,
                     offset: const Offset(0, 0),
                   ),
                   // Medium magical glow
                   BoxShadow(
-                    color: const Color(0xFFFF6B35).withOpacity(0.12 * _wheelGlowAnimation.value),
+                    color: const Color(
+                      0xFFFF6B35,
+                    ).withOpacity(0.12 * _wheelGlowAnimation.value),
                     blurRadius: 60,
                     spreadRadius: 15,
                     offset: const Offset(0, 0),
                   ),
                   // Inner energy glow
                   BoxShadow(
-                    color: const Color(0xFFAA6BFF).withOpacity(0.1 * _wheelGlowAnimation.value),
+                    color: const Color(
+                      0xFFAA6BFF,
+                    ).withOpacity(0.1 * _wheelGlowAnimation.value),
                     blurRadius: 40,
                     spreadRadius: 10,
                     offset: const Offset(0, 0),
@@ -662,7 +699,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                 shape: BoxShape.circle,
                 gradient: SweepGradient(
                   startAngle: _shineAnimation.value * 2 * math.pi,
-                  endAngle: (_shineAnimation.value * 2 * math.pi) + (math.pi / 3),
+                  endAngle:
+                      (_shineAnimation.value * 2 * math.pi) + (math.pi / 3),
                   colors: [
                     Colors.transparent,
                     Colors.white.withOpacity(0.1),
@@ -677,7 +715,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           },
         ),
 
-        // Enhanced main wheel with lighter shadows
+        // ⭐ MAIN WHEEL - ALWAYS SHOWS IMMEDIATELY ⭐
         AnimatedBuilder(
           animation: _spinAnimation,
           builder: (context, child) {
@@ -712,8 +750,12 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                     ),
                   ],
                 ),
+                // ⭐ WHEEL ALWAYS RENDERS - Uses cached images when available ⭐
                 child: CustomPaint(
-                  painter: EnhancedWheelPainter(_rewards),
+                  painter: OptimizedWheelPainter(
+                    _rewards,
+                    _imageCache.cachedRewardImages, // Use cached images
+                  ),
                   size: const Size(300, 300),
                 ),
               ),
@@ -727,10 +769,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           height: 300,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            border: Border.all(
-              width: 3,
-              color: Colors.white.withOpacity(0.4),
-            ),
+            border: Border.all(width: 3, color: Colors.white.withOpacity(0.4)),
             boxShadow: [
               BoxShadow(
                 color: Colors.white.withOpacity(0.2),
@@ -756,89 +795,92 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
-                      colors: _canSpin && !_isSpinning
-                          ? [
-                              const Color(0xFFFFE57F),
-                              const Color(0xFFFFD700),
-                              const Color(0xFFFFA500),
-                              const Color(0xFFFF8F00),
-                            ]
-                          : [
-                              Colors.grey[300]!,
-                              Colors.grey[500]!,
-                              Colors.grey[700]!,
-                              Colors.grey[900]!,
-                            ],
+                      colors:
+                          _canSpin && !_isSpinning
+                              ? [
+                                const Color(0xFFFFE57F),
+                                const Color(0xFFFFD700),
+                                const Color(0xFFFFA500),
+                                const Color(0xFFFF8F00),
+                              ]
+                              : [
+                                Colors.grey[300]!,
+                                Colors.grey[500]!,
+                                Colors.grey[700]!,
+                                Colors.grey[900]!,
+                              ],
                       stops: const [0.0, 0.3, 0.7, 1.0],
                     ),
-                    boxShadow: _canSpin && !_isSpinning
-                        ? [
-                            // Light button shadow
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.3),
-                              blurRadius: 20,
-                              offset: const Offset(0, 10),
-                              spreadRadius: -2,
-                            ),
-                            // Soft depth shadow
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 12,
-                              offset: const Offset(0, 6),
-                              spreadRadius: -1,
-                            ),
-                            // Golden glow effect
-                            BoxShadow(
-                              color: const Color(0xFFFFD700).withOpacity(0.4),
-                              blurRadius: 15,
-                              offset: const Offset(0, 0),
-                              spreadRadius: 1,
-                            ),
-                          ]
-                        : [
-                            // Disabled button shadows
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.25),
-                              blurRadius: 15,
-                              offset: const Offset(0, 8),
-                              spreadRadius: -2,
-                            ),
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.15),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4),
-                              spreadRadius: -1,
-                            ),
-                          ],
+                    boxShadow:
+                        _canSpin && !_isSpinning
+                            ? [
+                              // Light button shadow
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                                spreadRadius: -2,
+                              ),
+                              // Soft depth shadow
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.2),
+                                blurRadius: 12,
+                                offset: const Offset(0, 6),
+                                spreadRadius: -1,
+                              ),
+                              // Golden glow effect
+                              BoxShadow(
+                                color: const Color(0xFFFFD700).withOpacity(0.4),
+                                blurRadius: 15,
+                                offset: const Offset(0, 0),
+                                spreadRadius: 1,
+                              ),
+                            ]
+                            : [
+                              // Disabled button shadows
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.25),
+                                blurRadius: 15,
+                                offset: const Offset(0, 8),
+                                spreadRadius: -2,
+                              ),
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.15),
+                                blurRadius: 8,
+                                offset: const Offset(0, 4),
+                                spreadRadius: -1,
+                              ),
+                            ],
                   ),
-                  child: _isSpinning
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 4,
-                          ),
-                        )
-                      : Center(
-                          child: Text(
-                            'SPIN',
-                            style: GoogleFonts.luckiestGuy(
-                              fontSize: 24,
+                  child:
+                      _isSpinning
+                          ? const Center(
+                            child: CircularProgressIndicator(
                               color: Colors.white,
-                              shadows: [
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.8),
-                                  blurRadius: 4,
-                                  offset: const Offset(2, 2),
-                                ),
-                                Shadow(
-                                  color: Colors.black.withOpacity(0.4),
-                                  blurRadius: 8,
-                                  offset: const Offset(1, 1),
-                                ),
-                              ],
+                              strokeWidth: 4,
+                            ),
+                          )
+                          : Center(
+                            child: Text(
+                              'SPIN',
+                              style: GoogleFonts.luckiestGuy(
+                                fontSize: 24,
+                                color: Colors.white,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.8),
+                                    blurRadius: 4,
+                                    offset: const Offset(2, 2),
+                                  ),
+                                  Shadow(
+                                    color: Colors.black.withOpacity(0.4),
+                                    blurRadius: 8,
+                                    offset: const Offset(1, 1),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        ),
                 ),
               ),
             );
@@ -925,15 +967,16 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   void _showInfoDialog() {
     showDialog(
       context: context,
-      builder: (context) => _buildGameDialog(
-        title: 'How to Play',
-        icon: Icons.help_outline,
-        iconColor: const Color(0xFF2196F3),
-        content:
-            '• Each spin costs 10 coins\n• Daily limit: $_maxDailySpins spins\n• Win coins, jackpots, and more!\n• Play trivia to earn coins',
-        buttonText: 'Got it!',
-        onPressed: () => Navigator.pop(context),
-      ),
+      builder:
+          (context) => _buildGameDialog(
+            title: 'How to Play',
+            icon: Icons.help_outline,
+            iconColor: const Color(0xFF2196F3),
+            content:
+                '• Each spin costs 10 coins\n• Daily limit: $_maxDailySpins spins\n• Win coins, jackpots, and more!\n• Play trivia to earn coins',
+            buttonText: 'Got it!',
+            onPressed: () => Navigator.pop(context),
+          ),
     );
   }
 
@@ -953,94 +996,104 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   void _showRewards() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            gradient: const LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [Color(0xFF7B3EFF), Color(0xFF9854FF)],
+      builder:
+          (context) => Dialog(
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
             ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Available Rewards',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 20,
-                  color: Colors.white,
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF7B3EFF), Color(0xFF9854FF)],
                 ),
               ),
-              const SizedBox(height: 16),
-              ...List.generate(_rewards.length, (index) {
-                final reward = _rewards[index];
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 8),
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Available Rewards',
+                    style: GoogleFonts.luckiestGuy(
+                      fontSize: 20,
+                      color: Colors.white,
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(reward.icon, color: reward.color, size: 24),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          reward.label,
-                          style: GoogleFonts.roboto(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
+                  const SizedBox(height: 16),
+                  ...List.generate(_rewards.length, (index) {
+                    final reward = _rewards[index];
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(reward.icon, color: reward.color, size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              reward.label,
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
                           ),
-                        ),
+                          Text(
+                            '${(reward.probability * 100).toStringAsFixed(0)}%',
+                            style: GoogleFonts.roboto(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        '${(reward.probability * 100).toStringAsFixed(0)}%',
-                        style: GoogleFonts.roboto(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
+                    );
+                  }),
+                  const SizedBox(height: 16),
+                  CustomIconButton(
+                    icon: Icons.close,
+                    color: Colors.red,
+                    onPressed: () => Navigator.pop(context),
                   ),
-                );
-              }),
-              const SizedBox(height: 16),
-              CustomIconButton(
-                icon: Icons.close,
-                color: Colors.red,
-                onPressed: () => Navigator.pop(context),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      ),
     );
   }
 }
 
-// Enhanced Spin Reward class with probability
+// Enhanced Spin Reward class with probability and image
 class SpinReward {
   final String label;
   final int value;
   final Color color;
   final IconData icon;
   final double probability; // For weighted random selection
+  final String? imagePath; // Path to the image asset
 
-  SpinReward(this.label, this.value, this.color, this.icon, this.probability);
+  SpinReward(
+    this.label,
+    this.value,
+    this.color,
+    this.icon,
+    this.probability, [
+    this.imagePath,
+  ]);
 }
 
-// Enhanced wheel painter with better visuals and shine effects
-class EnhancedWheelPainter extends CustomPainter {
+// ⭐ OPTIMIZED WHEEL PAINTER - Shows immediately with fallbacks ⭐
+class OptimizedWheelPainter extends CustomPainter {
   final List<SpinReward> rewards;
+  final Map<String, ui.Image> availableImages; // Only cached images
 
-  EnhancedWheelPainter(this.rewards);
+  OptimizedWheelPainter(this.rewards, this.availableImages);
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1052,18 +1105,19 @@ class EnhancedWheelPainter extends CustomPainter {
       final startAngle = i * sectionAngle - math.pi / 2;
 
       // Bright section gradient with vibrant colors
-      final paint = Paint()
-        ..shader = RadialGradient(
-          center: Alignment.center,
-          radius: 1.0,
-          colors: [
-            Colors.white.withOpacity(0.4), // Bright highlight center
-            rewards[i].color.withOpacity(0.98),
-            rewards[i].color,
-            rewards[i].color.withOpacity(0.9),
-          ],
-          stops: const [0.0, 0.3, 0.7, 1.0],
-        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      final paint =
+          Paint()
+            ..shader = RadialGradient(
+              center: Alignment.center,
+              radius: 1.0,
+              colors: [
+                Colors.white.withOpacity(0.4), // Bright highlight center
+                rewards[i].color.withOpacity(0.98),
+                rewards[i].color,
+                rewards[i].color.withOpacity(0.9),
+              ],
+              stops: const [0.0, 0.3, 0.7, 1.0],
+            ).createShader(Rect.fromCircle(center: center, radius: radius));
 
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
@@ -1073,11 +1127,12 @@ class EnhancedWheelPainter extends CustomPainter {
         paint,
       );
 
-      // Enhanced section border with inner highlight
-      final borderPaint = Paint()
-        ..color = Colors.white.withOpacity(0.9)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4;
+      // Enhanced section border
+      final borderPaint =
+          Paint()
+            ..color = Colors.white.withOpacity(0.9)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 4;
 
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius),
@@ -1088,10 +1143,11 @@ class EnhancedWheelPainter extends CustomPainter {
       );
 
       // Inner border highlight
-      final innerBorderPaint = Paint()
-        ..color = Colors.white.withOpacity(0.4)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 2;
+      final innerBorderPaint =
+          Paint()
+            ..color = Colors.white.withOpacity(0.4)
+            ..style = PaintingStyle.stroke
+            ..strokeWidth = 2;
 
       canvas.drawArc(
         Rect.fromCircle(center: center, radius: radius - 10),
@@ -1101,49 +1157,52 @@ class EnhancedWheelPainter extends CustomPainter {
         innerBorderPaint,
       );
 
-      // Text positioning with better shadow
-      final textAngle = startAngle + sectionAngle / 2;
-      final textRadius = radius * 0.75;
+      // Image positioning
+      final imageAngle = startAngle + sectionAngle / 2;
+      final imageRadius = radius * 0.7;
+      final imageX = center.dx + imageRadius * math.cos(imageAngle);
+      final imageY = center.dy + imageRadius * math.sin(imageAngle);
 
-      // Draw text with enhanced shadow
-      final textX = center.dx + textRadius * math.cos(textAngle);
-      final textY = center.dy + textRadius * math.sin(textAngle);
+      // ⭐ CHECK IF IMAGE IS AVAILABLE (not loading) ⭐
+      final hasImage =
+          rewards[i].imagePath != null &&
+          availableImages.containsKey(rewards[i].imagePath);
 
-      final textPainter = TextPainter(
-        text: TextSpan(
-          text: rewards[i].label,
-          style: GoogleFonts.luckiestGuy(
-            color: Colors.white,
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            shadows: [
-              Shadow(
-                color: Colors.black.withOpacity(0.6),
-                blurRadius: 2,
-                offset: const Offset(1, 1),
-              ),
-              Shadow(
-                color: Colors.black.withOpacity(0.3),
-                blurRadius: 4,
-                offset: const Offset(0.5, 0.5),
-              ),
-            ],
-          ),
-        ),
-        textAlign: TextAlign.center,
-        textDirection: TextDirection.ltr,
-      );
+      if (hasImage) {
+        // ⭐ DRAW CACHED IMAGE IMMEDIATELY ⭐
+        final image = availableImages[rewards[i].imagePath!]!;
 
-      textPainter.layout();
+        canvas.save();
 
-      canvas.save();
-      canvas.translate(textX, textY);
-      canvas.rotate(textAngle + math.pi / 2);
-      textPainter.paint(
-        canvas,
-        Offset(-textPainter.width / 2, -textPainter.height / 2),
-      );
-      canvas.restore();
+        final imageRect = Rect.fromCenter(
+          center: Offset(imageX, imageY),
+          width: 70,
+          height: 70,
+        );
+
+        final clipPath = Path()..addOval(imageRect);
+        canvas.clipPath(clipPath);
+
+        final srcRect = Rect.fromLTWH(
+          0,
+          0,
+          image.width.toDouble(),
+          image.height.toDouble(),
+        );
+
+        final imagePaint =
+            Paint()
+              ..colorFilter = ColorFilter.mode(
+                Colors.white.withOpacity(0.95),
+                BlendMode.modulate,
+              );
+
+        canvas.drawImageRect(image, srcRect, imageRect, imagePaint);
+        canvas.restore();
+      } else {
+        // ⭐ IMMEDIATE FALLBACK - Show text/icon ⭐
+        _drawFallbackContent(canvas, rewards[i], imageX, imageY, imageAngle);
+      }
     }
 
     // Enhanced inner circle with 3D effect
@@ -1156,24 +1215,92 @@ class EnhancedWheelPainter extends CustomPainter {
       stops: const [0.0, 0.5, 1.0],
     );
 
-    final innerPaint = Paint()
-      ..shader = innerGradient.createShader(
-        Rect.fromCircle(center: center, radius: radius * 0.3),
-      );
+    final innerPaint =
+        Paint()
+          ..shader = innerGradient.createShader(
+            Rect.fromCircle(center: center, radius: radius * 0.3),
+          );
 
     canvas.drawCircle(center, radius * 0.3, innerPaint);
 
     // Inner rim with metallic effect
-    final rimPaint = Paint()
-      ..color = Colors.white.withOpacity(0.6)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+    final rimPaint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.6)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
 
     canvas.drawCircle(center, radius * 0.3, rimPaint);
   }
 
+  // ⭐ IMMEDIATE FALLBACK CONTENT ⭐
+  void _drawFallbackContent(
+    Canvas canvas,
+    SpinReward reward,
+    double x,
+    double y,
+    double angle,
+  ) {
+    // Draw semi-transparent circular background
+    final bgPaint =
+        Paint()
+          ..color = Colors.black.withOpacity(0.3)
+          ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(x, y), 35, bgPaint);
+
+    // Determine display text
+    String displayText;
+    if (reward.value == 0) {
+      displayText = 'TRY\nAGAIN';
+    } else if (reward.value == 500) {
+      displayText = 'JACK\nPOT!';
+    } else {
+      displayText = '${reward.value}\nCOINS';
+    }
+
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: displayText,
+        style: GoogleFonts.luckiestGuy(
+          color: Colors.white,
+          fontSize: reward.value == 500 ? 10 : 12,
+          fontWeight: FontWeight.bold,
+          shadows: [
+            Shadow(
+              color: Colors.black.withOpacity(0.8),
+              blurRadius: 2,
+              offset: const Offset(1, 1),
+            ),
+            Shadow(
+              color: Colors.black.withOpacity(0.4),
+              blurRadius: 4,
+              offset: const Offset(0.5, 0.5),
+            ),
+          ],
+        ),
+      ),
+      textAlign: TextAlign.center,
+      textDirection: TextDirection.ltr,
+    );
+
+    textPainter.layout();
+
+    canvas.save();
+    canvas.translate(x, y);
+    canvas.rotate(angle + math.pi / 2);
+    textPainter.paint(
+      canvas,
+      Offset(-textPainter.width / 2, -textPainter.height / 2),
+    );
+    canvas.restore();
+  }
+
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant CustomPainter oldDelegate) {
+    // Repaint when available images change
+    if (oldDelegate is! OptimizedWheelPainter) return true;
+    return oldDelegate.availableImages.length != availableImages.length;
+  }
 }
 
 // Enhanced particle effect painter with more variety
@@ -1219,7 +1346,7 @@ class ParticlePainter extends CustomPainter {
             final trailDistance = distance - (trail * 10);
             final trailX = center.dx + trailDistance * math.cos(angle);
             final trailY = center.dy + trailDistance * math.sin(angle);
-            
+
             paint.color = colors[i % colors.length].withOpacity(
               (1.0 - animationValue) * (1.0 - trail * 0.3) * (1.0 - ring * 0.2),
             );
@@ -1253,17 +1380,18 @@ class EnhancedPointerPainter extends CustomPainter {
     path.close();
 
     // Gradient paint for pointer
-    final gradientPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.white,
-          const Color(0xFFFFD700),
-          const Color(0xFFFFA500),
-        ],
-        stops: const [0.0, 0.6, 1.0],
-      ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
+    final gradientPaint =
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              const Color(0xFFFFD700),
+              const Color(0xFFFFA500),
+            ],
+            stops: const [0.0, 0.6, 1.0],
+          ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
 
     // Draw lighter shadow
     canvas.drawShadow(path, Colors.black.withOpacity(0.3), 4, false);
@@ -1273,10 +1401,11 @@ class EnhancedPointerPainter extends CustomPainter {
     canvas.drawPath(path, gradientPaint);
 
     // Add lighter border with highlight
-    final borderPaint = Paint()
-      ..color = Colors.black.withOpacity(0.2)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2;
+    final borderPaint =
+        Paint()
+          ..color = Colors.black.withOpacity(0.2)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 2;
 
     canvas.drawPath(path, borderPaint);
 
@@ -1287,10 +1416,11 @@ class EnhancedPointerPainter extends CustomPainter {
     highlightPath.lineTo(centerX + 15, 8);
     highlightPath.close();
 
-    final highlightPaint = Paint()
-      ..color = Colors.white.withOpacity(0.4)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
+    final highlightPaint =
+        Paint()
+          ..color = Colors.white.withOpacity(0.4)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = 1;
 
     canvas.drawPath(highlightPath, highlightPaint);
   }

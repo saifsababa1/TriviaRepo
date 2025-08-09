@@ -8,14 +8,17 @@ class TriviaService {
 
   final Random _random = Random();
 
-  // Web-safe shuffle implementation
-  void _shuffleList<T>(List<T> list) {
-    for (int i = list.length - 1; i > 0; i--) {
-      int j = _random.nextInt(i + 1);
-      T temp = list[i];
-      list[i] = list[j];
-      list[j] = temp;
+  // Web-safe shuffle implementation using List.from and removeAt
+  List<T> _shuffleList<T>(List<T> list) {
+    final shuffled = <T>[];
+    final temp = List<T>.from(list); // Create mutable copy
+
+    while (temp.isNotEmpty) {
+      final randomIndex = _random.nextInt(temp.length);
+      shuffled.add(temp.removeAt(randomIndex));
     }
+
+    return shuffled;
   }
 
   // Comprehensive trivia questions database
@@ -530,7 +533,7 @@ class TriviaService {
     }
 
     // Shuffle the list (web-safe implementation)
-    _shuffleList(filteredQuestions);
+    filteredQuestions = _shuffleList(filteredQuestions);
 
     // Take the requested count or all available questions if less
     int takeCount =

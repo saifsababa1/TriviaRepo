@@ -7,7 +7,8 @@ import '../widgets/bottom_nav_bar.dart';
 import 'home_screen.dart';
 import 'trivia_screen.dart';
 import 'leaderboard_screen.dart';
-import 'enhanced_spin_screen.dart'; // Add this import
+import 'enhanced_spin_screen.dart';
+import 'settings_screen.dart';
 import 'awards_screen.dart';
 
 class AllComponentsPreview extends StatefulWidget {
@@ -270,7 +271,7 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
       case 3:
         return const AwardsScreen();
       case 4:
-        return const TriviaScreen();
+        return const SettingsScreen();
       default:
         return HomeScreen(
           onPlayPressed: _onPlayPressed,

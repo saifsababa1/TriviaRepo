@@ -3,6 +3,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+// Simple StarCoin widget for display purposes
+class StarCoin extends StatelessWidget {
+  final double size;
+
+  const StarCoin({super.key, this.size = 24.0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: const BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          colors: [Color(0xFFFFE55C), Color(0xFFFFD700), Color(0xFFFFA500)],
+          stops: [0.0, 0.7, 1.0],
+        ),
+      ),
+      child: Icon(
+        Icons.star,
+        color: Colors.white.withOpacity(0.9),
+        size: size * 0.6,
+      ),
+    );
+  }
+}
+
 class StarCoinCredit extends StatelessWidget {
   final double size;
   final Color primaryColor;
