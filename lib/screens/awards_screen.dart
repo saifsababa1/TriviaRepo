@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class SpinScreen extends StatelessWidget {
-  const SpinScreen({super.key});
+class AwardsScreen extends StatelessWidget {
+  const AwardsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
     return const SizedBox.shrink();
   }
-} 
+}

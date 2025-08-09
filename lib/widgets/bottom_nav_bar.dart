@@ -176,11 +176,11 @@ class _BottomNavBarState extends State<BottomNavBar>
                     curve: Curves.easeInOutCubic,
                     left:
                         (MediaQuery.of(context).size.width - 32) /
-                        4 *
+                        5 *
                         widget.currentIndex,
                     top: 0,
                     bottom: 0,
-                    width: (MediaQuery.of(context).size.width - 32) / 4,
+                    width: (MediaQuery.of(context).size.width - 32) / 5,
                     child: Container(
                       margin: EdgeInsets.zero,
                       decoration: BoxDecoration(
@@ -213,24 +213,30 @@ class _BottomNavBarState extends State<BottomNavBar>
                 children: [
                   _buildNavItem(
                     0,
+                    Icons.casino,
+                    'SPIN',
+                    const Color(0xFF00BCD4),
+                  ),
+                  _buildNavItem(
+                    1,
+                    Icons.leaderboard,
+                    'LEADERBOARD',
+                    const Color(0xFFFFD700),
+                  ),
+                  _buildNavItem(
+                    2,
                     Icons.home_rounded,
                     'HOME',
                     const Color(0xFF4CAF50),
                   ),
                   _buildNavItem(
-                    1,
+                    3,
                     Icons.emoji_events,
                     'AWARDS',
-                    const Color(0xFFFFD700),
+                    const Color(0xFFFFA500),
                   ),
                   _buildNavItem(
-                    2,
-                    Icons.casino,
-                    'LUCKY\nWHEEL',
-                    const Color(0xFF00BCD4),
-                  ),
-                  _buildNavItem(
-                    3,
+                    4,
                     Icons.settings,
                     'SETTINGS',
                     const Color(0xFF9C27B0),
@@ -248,7 +254,7 @@ class _BottomNavBarState extends State<BottomNavBar>
     int newIndex = widget.currentIndex + direction;
 
     // Check boundaries
-    if (newIndex >= 0 && newIndex <= 3) {
+    if (newIndex >= 0 && newIndex <= 4) {
       HapticFeedback.lightImpact(); // Haptic feedback for swipe
       widget.onTap(newIndex);
     } else {
@@ -395,13 +401,15 @@ class _BottomNavBarState extends State<BottomNavBar>
   Color _getCurrentColor() {
     switch (widget.currentIndex) {
       case 0:
-        return const Color(0xFF4CAF50);
+        return const Color(0xFF00BCD4); // Spin
       case 1:
-        return const Color(0xFFFFD700);
+        return const Color(0xFFFFD700); // Leaderboard
       case 2:
-        return const Color(0xFF00BCD4);
+        return const Color(0xFF4CAF50); // Home (center)
       case 3:
-        return const Color(0xFF9C27B0);
+        return const Color(0xFFFFA500); // Awards
+      case 4:
+        return const Color(0xFF9C27B0); // Settings
       default:
         return const Color(0xFF4CAF50);
     }
