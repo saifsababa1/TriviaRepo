@@ -2,34 +2,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'play_button.dart';
-import 'continue_button.dart';
-import 'next_button.dart';
-import 'custom_icons.dart';
-import 'star_coin.dart';
-import 'bottom_nav_bar.dart'; // Add the new import
-
-// 2. Add the SplashScreen widget at the top (after imports)
-class TriviaSplashScreen extends StatelessWidget {
-  const TriviaSplashScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => Navigator.of(context).pop(),
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: SizedBox.expand(
-          child: Image.asset(
-            'assets/images/image.png',
-            fit: BoxFit.cover,
-            alignment: Alignment.center,
-          ),
-        ),
-      ),
-    );
-  }
-}
+import '../widgets/play_button.dart';
+import '../widgets/continue_button.dart';
+import '../widgets/next_button.dart';
+import '../widgets/custom_icons_row.dart';
+import '../widgets/star_coin.dart';
+import '../widgets/bottom_nav_bar.dart'; // Add the new import
+import 'home_screen.dart';
+import 'trivia_screen.dart';
+import 'leaderboard_screen.dart';
+import 'spin_screen.dart';
 
 class AllComponentsPreview extends StatefulWidget {
   const AllComponentsPreview({super.key});
@@ -409,234 +391,24 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
   Widget _buildPageContent() {
     switch (_currentNavIndex) {
       case 0:
-        return _buildHomeContent();
+        return HomeScreen(
+          onPlayPressed: _onPlayPressed,
+          onNextPressed: _onNextPressed,
+          onContinuePressed: _onContinuePressed,
+        );
       case 1:
-        return _buildAwardsContent();
+        return LeaderboardScreen();
       case 2:
-        return _buildLuckyWheelContent();
+        return SpinScreen();
       case 3:
-        return _buildSettingsContent();
+        return TriviaScreen();
       default:
-        return _buildHomeContent();
+        return HomeScreen(
+          onPlayPressed: _onPlayPressed,
+          onNextPressed: _onNextPressed,
+          onContinuePressed: _onContinuePressed,
+        );
     }
-  }
-
-  Widget _buildHomeContent() {
-    return Column(
-      key: const ValueKey('home'),
-      children: [
-        // Splash Button
-        Padding(
-          padding: const EdgeInsets.only(bottom: 20.0),
-          child: ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 18),
-              backgroundColor: const Color(0xFF7B3EFF),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(18),
-              ),
-              elevation: 8,
-              shadowColor: Colors.deepPurple.withOpacity(0.3),
-              textStyle: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, letterSpacing: 1.2),
-            ),
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => const TriviaSplashScreen(),
-                  fullscreenDialog: true,
-                ),
-              );
-            },
-            child: const Text('Show Trivia Master Splash'),
-          ),
-        ),
-        // Buttons Row 1
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              PlayButton(
-                text: 'PLAY',
-                color: const Color(0xFF4CAF50),
-                onPressed: _onPlayPressed,
-              ),
-              const SizedBox(width: 16),
-              NextButton(
-                text: 'NEXT',
-                color: const Color(0xFF2196F3),
-                onPressed: _onNextPressed,
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 20),
-
-        // Continue Button
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ContinueButton(
-                text: 'CONTINUE',
-                color: const Color(0xFF9C27B0),
-                onPressed: _onContinuePressed,
-              ),
-            ],
-          ),
-        ),
-
-        const SizedBox(height: 32),
-
-        // Custom Icons
-        const CustomIconsRow(),
-      ],
-    );
-  }
-
-  Widget _buildAwardsContent() {
-    return Column(
-      key: const ValueKey('awards'),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFFFFD700).withOpacity(0.2),
-                const Color(0xFFFFA500).withOpacity(0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFFFFD700).withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(
-                Icons.emoji_events,
-                size: 60,
-                color: const Color(0xFFFFD700),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Coming Soon!',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 18,
-                  color: const Color(0xFFFFD700),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Your achievements and trophies will appear here',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 12,
-                  color: Colors.white70,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLuckyWheelContent() {
-    return Column(
-      key: const ValueKey('wheel'),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF00BCD4).withOpacity(0.2),
-                const Color(0xFF0097A7).withOpacity(0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF00BCD4).withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.casino, size: 60, color: const Color(0xFF00BCD4)),
-              const SizedBox(height: 16),
-              Text(
-                'Lucky Wheel!',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 18,
-                  color: const Color(0xFF00BCD4),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Spin to win amazing prizes and credits!',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 12,
-                  color: Colors.white70,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSettingsContent() {
-    return Column(
-      key: const ValueKey('settings'),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [
-                const Color(0xFF9C27B0).withOpacity(0.2),
-                const Color(0xFF7B1FA2).withOpacity(0.1),
-              ],
-            ),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: const Color(0xFF9C27B0).withOpacity(0.3),
-              width: 1,
-            ),
-          ),
-          child: Column(
-            children: [
-              Icon(Icons.settings, size: 60, color: const Color(0xFF9C27B0)),
-              const SizedBox(height: 16),
-              Text(
-                'Settings',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 18,
-                  color: const Color(0xFF9C27B0),
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Customize your game experience',
-                style: GoogleFonts.luckiestGuy(
-                  fontSize: 12,
-                  color: Colors.white70,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
   }
 
   // Helper methods for navigation feedback

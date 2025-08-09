@@ -62,7 +62,6 @@ flutter:
   # To add assets to your application, add an assets section, like this:
   assets:
     - assets/images/star_coin.png
-    - assets/images/image.png
 
   # An image asset can refer to one or more resolution-variant files.
   # See https://flutter.dev/assets-and-images/#resolution-aware
@@ -90,13 +89,13 @@ flutter:
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 
-flutter_native_splash:
-  color: "#7B3EFF" # Use your app's purple background color
-  image: assets/images/image.png
-  android: true
-  ios: true
-  web: true
-  android_gravity: center
-  ios_content_mode: scaleAspectFit
-  web_image_mode: contain
-  fullscreen: true
+# flutter_native_splash:
+#   color: "#7B3EFF" # Use your app's purple background color
+#   image: 
+#   android: true
+#   ios: true
+#   web: true
+#   android_gravity: center
+#   ios_content_mode: scaleAspectFit
+#   web_image_mode: contain
+#   fullscreen: true
