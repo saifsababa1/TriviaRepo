@@ -1,0 +1,8 @@
+[33m5289b1e[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Enhance AllComponentsPreview and navigation structure
+[33m32bbce2[m Refactor UI components and remove unused assets
+[33mcac5efa[m Add AllComponentsPreview, BottomNavBar, and CustomIconButton widgets
+[33m9820c4c[m Implemented splash screen functionality with custom background and image assets. Updated pubspec.yaml to include flutter_native_splash dependency and configured launch screens for both Android and iOS. Enhanced web index.html with splash screen styles and scripts for improved user experience.
+[33m5eeacbe[m Enhanced AllComponentsPreview with smooth page transitions, added bottom navigation, and improved button click tracking. Integrated Google Fonts for better typography and refined UI elements for a more engaging user experience.
+[33m699220d[m Added star coin asset and integrated GameCreditSystem component into AllComponentsPreview.
+[33m34f7a50[m components initilization has been doen
+[33m2eae81e[m Initial commit with custom Flutter trivia UI
