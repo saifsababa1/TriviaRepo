@@ -9,6 +9,7 @@ class StarCoinCredit extends StatelessWidget {
   final Color primaryColor;
   final int creditAmount;
   final VoidCallback? onTap;
+  final bool showNumberOverlay;
 
   const StarCoinCredit({
     super.key,
@@ -16,13 +17,14 @@ class StarCoinCredit extends StatelessWidget {
     this.primaryColor = const Color(0xFFFFD700),
     required this.creditAmount,
     this.onTap,
+    this.showNumberOverlay = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: size,
         height: size,
         child: Stack(
@@ -42,13 +44,13 @@ class StarCoinCredit extends StatelessWidget {
                   return Container(
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: RadialGradient(
+                      gradient: const RadialGradient(
                         colors: [
-                          const Color(0xFFFFE55C),
-                          const Color(0xFFFFD700),
-                          const Color(0xFFFFA500),
+                          Color(0xFFFFE55C),
+                          Color(0xFFFFD700),
+                          Color(0xFFFFA500),
                         ],
-                        stops: const [0.0, 0.7, 1.0],
+                        stops: [0.0, 0.7, 1.0],
                       ),
                     ),
                     child: Icon(
@@ -60,51 +62,51 @@ class StarCoinCredit extends StatelessWidget {
                 },
               ),
             ),
-            // Number display (unchanged)
-            Positioned(
-              bottom: size * 0.05,
-              child: Container(
-                constraints: BoxConstraints(
-                  minWidth: size * 0.3,
-                  maxWidth: size * 0.65,
-                ),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.92),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: primaryColor.withOpacity(0.25),
-                    width: 0.8,
+            if (showNumberOverlay)
+              Positioned(
+                bottom: size * 0.05,
+                child: Container(
+                  constraints: BoxConstraints(
+                    minWidth: size * 0.3,
+                    maxWidth: size * 0.65,
                   ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.08),
-                      blurRadius: 3,
-                      offset: const Offset(0, 1),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.92),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: primaryColor.withOpacity(0.25),
+                      width: 0.8,
                     ),
-                  ],
-                ),
-                child: Text(
-                  creditAmount.toString(),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.luckiestGuy(
-                    fontSize: size * 0.12,
-                    color: const Color(0xFF2D5016),
-                    fontWeight: FontWeight.w600,
-                    shadows: [
-                      Shadow(
-                        color: Colors.white.withOpacity(0.6),
-                        blurRadius: 0.5,
-                        offset: const Offset(0, 0.5),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 3,
+                        offset: const Offset(0, 1),
                       ),
                     ],
                   ),
+                  child: Text(
+                    creditAmount.toString(),
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.luckiestGuy(
+                      fontSize: size * 0.12,
+                      color: const Color(0xFF2D5016),
+                      fontWeight: FontWeight.w600,
+                      shadows: [
+                        Shadow(
+                          color: Colors.white.withOpacity(0.6),
+                          blurRadius: 0.5,
+                          offset: const Offset(0, 0.5),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ),
@@ -268,18 +270,17 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
 
               // Spend credits button for smooth decrease
               ElevatedButton.icon(
-                onPressed:
-                    _totalCredits >= 10
-                        ? () {
-                          HapticFeedback.lightImpact();
-                          setState(() {
-                            _totalCredits = (_totalCredits - 10).clamp(
-                              0,
-                              _totalCredits,
-                            ); // Smooth decrease
-                          });
-                        }
-                        : null,
+                onPressed: _totalCredits >= 10
+                    ? () {
+                        HapticFeedback.lightImpact();
+                        setState(() {
+                          _totalCredits = (_totalCredits - 10).clamp(
+                            0,
+                            _totalCredits,
+                          ); // Smooth decrease
+                        });
+                      }
+                    : null,
                 icon: const Icon(Icons.remove, color: Colors.white),
                 label: Text(
                   'Spend -10',
@@ -290,9 +291,7 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      _totalCredits >= 10
-                          ? const Color(0xFFFF5722)
-                          : Colors.grey,
+                      _totalCredits >= 10 ? const Color(0xFFFF5722) : Colors.grey,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 8,
@@ -338,18 +337,17 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
               ),
 
               ElevatedButton(
-                onPressed:
-                    _totalCredits >= 50
-                        ? () {
-                          HapticFeedback.mediumImpact();
-                          setState(() {
-                            _totalCredits = (_totalCredits - 50).clamp(
-                              0,
-                              _totalCredits,
-                            ); // Large smooth decrease
-                          });
-                        }
-                        : null,
+                onPressed: _totalCredits >= 50
+                    ? () {
+                        HapticFeedback.mediumImpact();
+                        setState(() {
+                          _totalCredits = (_totalCredits - 50).clamp(
+                            0,
+                            _totalCredits,
+                          ); // Large smooth decrease
+                        });
+                      }
+                    : null,
                 child: Text(
                   'Big Spend -50',
                   style: GoogleFonts.luckiestGuy(
@@ -359,9 +357,7 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                 ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
-                      _totalCredits >= 50
-                          ? const Color(0xFFE91E63)
-                          : Colors.grey,
+                      _totalCredits >= 50 ? const Color(0xFFE91E63) : Colors.grey,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
                     vertical: 6,

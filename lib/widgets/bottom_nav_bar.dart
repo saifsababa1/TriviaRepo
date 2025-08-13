@@ -138,112 +138,132 @@ class _BottomNavBarState extends State<BottomNavBar>
       },
       child: Container(
         height: 85,
-        margin: const EdgeInsets.all(16),
+        width: double.infinity,
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(25),
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFFFFFFF), Color(0xFFF8F9FA), Color(0xFFE9ECEF)],
-          ),
+          // Enhanced 2D elevated look with multiple shadow layers
           boxShadow: [
-            // Main shadow for depth
+            // Primary shadow for main elevation
             BoxShadow(
-              color: Colors.black.withOpacity(0.15),
-              blurRadius: 20,
-              offset: const Offset(0, 8),
+              color: Colors.black.withOpacity(0.25),
+              blurRadius: 25,
+              offset: const Offset(0, 12),
               spreadRadius: 0,
             ),
-            // Inner highlight
+            // Secondary shadow for depth
             BoxShadow(
-              color: Colors.white.withOpacity(0.8),
+              color: Colors.black.withOpacity(0.15),
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+              spreadRadius: 0,
+            ),
+            // Tertiary shadow for subtle depth
+            BoxShadow(
+              color: Colors.black.withOpacity(0.08),
+              blurRadius: 8,
+              offset: const Offset(0, 3),
+              spreadRadius: 0,
+            ),
+            // Top highlight for 2D elevated effect
+            BoxShadow(
+              color: Colors.white.withOpacity(0.9),
+              blurRadius: 2,
+              offset: const Offset(0, -2),
+              spreadRadius: 0,
+            ),
+            // Inner highlight for glass effect
+            BoxShadow(
+              color: Colors.white.withOpacity(0.6),
               blurRadius: 1,
               offset: const Offset(0, -1),
               spreadRadius: 0,
             ),
           ],
         ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(25),
-          child: Stack(
-            children: [
-              // Full coverage sliding indicator
-              AnimatedBuilder(
-                animation: _indicatorAnimation,
-                builder: (context, child) {
-                  return AnimatedPositioned(
-                    duration: const Duration(milliseconds: 400),
-                    curve: Curves.easeInOutCubic,
-                    left:
-                        (MediaQuery.of(context).size.width - 32) /
-                        5 *
-                        widget.currentIndex,
-                    top: 0,
-                    bottom: 0,
-                    width: (MediaQuery.of(context).size.width - 32) / 5,
-                    child: Container(
-                      margin: EdgeInsets.zero,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(25),
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            _getCurrentColor().withOpacity(0.3),
-                            _getCurrentColor().withOpacity(0.2),
-                            _getCurrentColor().withOpacity(0.1),
-                          ],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _getCurrentColor().withOpacity(0.25),
-                            blurRadius: 6,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
+        child: Container(
+          height: double.infinity,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            // Transparent background similar to chest cards
+            color: Colors.white.withOpacity(0.10),
+            // Enhanced border for 2D elevated effect
+            border: Border.all(
+              color: Colors.white.withOpacity(0.22),
+              width: 1,
+            ),
+          ),
+          child: ClipRect(
+            child: Stack(
+              children: [
+                // Full coverage sliding indicator
+                AnimatedBuilder(
+                  animation: _indicatorAnimation,
+                  builder: (context, child) {
+                    return AnimatedPositioned(
+                      duration: const Duration(milliseconds: 400),
+                      curve: Curves.easeInOutCubic,
+                      left: MediaQuery.of(context).size.width / 5 * widget.currentIndex,
+                      top: 0,
+                      bottom: 0,
+                      width: MediaQuery.of(context).size.width / 5,
+                      child: Container(
+                        margin: EdgeInsets.zero,
+                                                 decoration: BoxDecoration(
+                           color: _getCurrentColor().withOpacity(0.15),
+                           border: Border.all(
+                             color: _getCurrentColor().withOpacity(0.3),
+                             width: 1,
+                           ),
+                           boxShadow: [
+                             BoxShadow(
+                               color: _getCurrentColor().withOpacity(0.2),
+                               blurRadius: 6,
+                               offset: const Offset(0, 2),
+                             ),
+                           ],
+                         ),
                       ),
-                    ),
-                  );
-                },
-              ),
+                    );
+                  },
+                ),
 
-              // Navigation items
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(
-                    0,
-                    Icons.casino,
-                    'SPIN',
-                    const Color(0xFF00BCD4),
-                  ),
-                  _buildNavItem(
-                    1,
-                    Icons.leaderboard,
-                    'LEADERBOARD',
-                    const Color(0xFFFFD700),
-                  ),
-                  _buildNavItem(
-                    2,
-                    Icons.home_rounded,
-                    'HOME',
-                    const Color(0xFF4CAF50),
-                  ),
-                  _buildNavItem(
-                    3,
-                    Icons.emoji_events,
-                    'AWARDS',
-                    const Color(0xFFFFA500),
-                  ),
-                  _buildNavItem(
-                    4,
-                    Icons.settings,
-                    'SETTINGS',
-                    const Color(0xFF9C27B0),
-                  ),
-                ],
-              ),
-            ],
+                // Navigation items
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(
+                      0,
+                      Icons.casino,
+                      'SPIN',
+                      const Color(0xFF00BCD4),
+                    ),
+                    _buildNavItem(
+                      1,
+                      Icons.leaderboard,
+                      'LEADERBOARD',
+                      const Color(0xFFFFD700),
+                    ),
+                    _buildNavItem(
+                      2,
+                      Icons.home_rounded,
+                      'HOME',
+                      const Color(0xFF4CAF50),
+                    ),
+                    _buildNavItem(
+                      3,
+                      Icons.emoji_events,
+                      'AWARDS',
+                      const Color(0xFFFFA500),
+                    ),
+                    _buildNavItem(
+                      4,
+                      Icons.settings,
+                      'SETTINGS',
+                      const Color(0xFF9C27B0),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -296,9 +316,6 @@ class _BottomNavBarState extends State<BottomNavBar>
                 },
                 splashColor: color.withOpacity(0.1), // Subtle splash effect
                 highlightColor: color.withOpacity(0.05), // Subtle highlight
-                borderRadius: BorderRadius.circular(
-                  25,
-                ), // Match container radius
                 child: Container(
                   height: double.infinity,
                   width: double.infinity,
@@ -316,40 +333,19 @@ class _BottomNavBarState extends State<BottomNavBar>
                         height: isSelected ? 48 : 42,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          gradient:
-                              isSelected
-                                  ? LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      color.withOpacity(0.9),
-                                      color.withOpacity(0.7),
-                                      color.withOpacity(0.5),
-                                    ],
-                                  )
-                                  : LinearGradient(
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                    colors: [
-                                      Colors.grey.withOpacity(0.3),
-                                      Colors.grey.withOpacity(0.2),
-                                      Colors.grey.withOpacity(0.1),
-                                    ],
-                                  ),
-                          boxShadow: [
-                            BoxShadow(
-                              color:
-                                  isSelected
-                                      ? color.withOpacity(0.4)
-                                      : Colors.black.withOpacity(0.1),
-                              blurRadius: isSelected ? 8.0 : 4.0,
-                              offset:
-                                  isSelected
-                                      ? const Offset(0, 3)
-                                      : const Offset(0, 2),
-                              spreadRadius: 0,
-                            ),
-                          ],
+                                                     color: isSelected
+                               ? color.withOpacity(0.25)
+                               : Colors.white.withOpacity(0.15),
+                                                     boxShadow: [
+                             BoxShadow(
+                               color: isSelected
+                                   ? color.withOpacity(0.3)
+                                   : Colors.black.withOpacity(0.1),
+                               blurRadius: isSelected ? 8.0 : 4.0,
+                               offset: const Offset(0, 2),
+                               spreadRadius: 0,
+                             ),
+                           ],
                         ),
                         child: AnimatedScale(
                           scale: isPressed ? 0.9 : 1.0,
