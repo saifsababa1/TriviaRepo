@@ -7,8 +7,10 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 import '../services/game_state_service.dart';
 import '../services/image_cache_service.dart';
+import '../services/unified_audio_service.dart';
 import '../widgets/star_coin.dart';
 import '../widgets/custom_icons.dart';
+import '../widgets/enhanced_lucky_wheel_win_animation.dart';
 
 class EnhancedSpinScreen extends StatefulWidget {
   const EnhancedSpinScreen({super.key});
@@ -38,12 +40,14 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   int _selectedReward = 0;
   int _currentCoins = 0;
   int _dailySpinsUsed = 0;
-  int _maxDailySpins = 5;
+  final int _maxDailySpins = 5;
+  bool _showGoldCoinAnimation = false;
+  int _lastWonCoins = 0;
 
   // Image cache service
   final ImageCacheService _imageCache = ImageCacheService();
 
-  // Enhanced rewards with image assets
+  // FIXED: Rewards array in the exact visual order (clockwise from top)
   final List<SpinReward> _rewards = [
     SpinReward(
       '5 Coins',
@@ -117,19 +121,20 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     _loadCurrentCoins();
     _initializeAnimations();
     _startAmbientAnimations();
-    // No need to load images here - they're already preloaded!
+
+    // Ensure clean state
+    _showGoldCoinAnimation = false;
   }
 
   void _loadCurrentCoins() {
     _currentCoins = GameStateService().currentCoins;
-    // Load daily spins from preferences (simplified for demo)
-    _dailySpinsUsed = 0; // This would be loaded from SharedPreferences
+    _dailySpinsUsed = 0;
   }
 
   void _initializeAnimations() {
     // Spin animation - longer and more dramatic
     _spinController = AnimationController(
-      duration: const Duration(milliseconds: 4000),
+      duration: const Duration(milliseconds: 5000),
       vsync: this,
     );
 
@@ -236,10 +241,25 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     // Enhanced reward selection with weighted probability
     _selectedReward = _getWeightedRandomReward();
 
-    // Calculate the angle to land on the selected reward
-    final baseAngle = (_selectedReward * (360 / _rewards.length)) / 360;
-    final extraRotations = 4 + math.Random().nextDouble() * 2; // 4-6 rotations
-    final finalAngle = extraRotations + baseAngle;
+    // Show debug info for development
+    setState(() {});
+
+    // ULTIMATE FIX: Direct segment-to-segment rotation
+    // We have 8 segments, each is 45° apart
+    final degreesPerSegment = 45.0;
+
+    // The wheel starts with segment 0 at the top (under pointer)
+    // To get segment X under the pointer, we rotate by X segments
+    // BUT: the wheel rotates visually (Transform.rotate), so we use negative rotation
+    final targetRotationDegrees = -(_selectedReward * degreesPerSegment);
+
+    // Add extra rotations for drama (always in full 360° increments)
+    final extraFullRotations = (4 + math.Random().nextDouble() * 2).round();
+    final totalRotationDegrees =
+        -(extraFullRotations * 360.0) + targetRotationDegrees;
+
+    // Convert to radians for the animation
+    final finalAngle = totalRotationDegrees * (math.pi / 180.0);
 
     _spinAnimation = Tween<double>(begin: 0.0, end: finalAngle).animate(
       CurvedAnimation(parent: _spinController, curve: Curves.easeOutCubic),
@@ -247,6 +267,13 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
 
     // Start particle effect
     _particleController.forward();
+
+    // Play wheel spin sound
+    try {
+      await UnifiedAudioService().playWheelSpin();
+    } catch (e) {
+      // Error playing wheel spin sound
+    }
 
     // Haptic feedback during spin
     HapticFeedback.mediumImpact();
@@ -256,15 +283,25 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
 
     // Award the reward
     final reward = _rewards[_selectedReward];
+    final coinsToAward = reward.value;
 
-    if (reward.value > 0) {
-      await GameStateService().earnCoins(reward.value);
-      _currentCoins += reward.value;
+    if (coinsToAward > 0) {
+      await GameStateService().earnCoins(coinsToAward);
+      _currentCoins += coinsToAward;
+
+      // Debug: Simple and clear calculations
     }
 
     setState(() {
       _isSpinning = false;
     });
+
+    // Play win sound after wheel spin completes
+    try {
+      await UnifiedAudioService().playGameWin();
+    } catch (e) {
+      // Error playing win sound
+    }
 
     // Enhanced haptic feedback based on reward
     if (reward.value >= 100) {
@@ -276,6 +313,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       HapticFeedback.lightImpact();
     }
 
+    // 🔧 FIXED: Show only ONE congratulations screen
     _showRewardDialog(reward);
 
     // Reset particle animation
@@ -285,6 +323,22 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     setState(() {
       _canSpin = true;
     });
+  }
+
+  int _getSegmentUnderPointer(double wheelRotation) {
+    // Convert to degrees and handle the negative rotation properly
+    var rotationDegrees = (wheelRotation * 180.0 / math.pi) % 360.0;
+
+    // Make sure we have a positive angle
+    if (rotationDegrees < 0) {
+      rotationDegrees += 360.0;
+    }
+
+    // Since we rotate by negative amounts, we need to reverse the calculation
+    // If we rotated by -X°, then segment (X/45) is now at the top
+    final segmentAtTop = ((360.0 - rotationDegrees) / 45.0).round() % 8;
+
+    return segmentAtTop;
   }
 
   int _getWeightedRandomReward() {
@@ -341,32 +395,65 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
     );
   }
 
-  void _showRewardDialog(SpinReward reward) {
-    final isJackpot = reward.value >= 500;
-    final isBigWin = reward.value >= 100;
+  void _dismissWinOverlay() {
+    if (_showGoldCoinAnimation) {
+      setState(() {
+        _showGoldCoinAnimation = false;
+        _lastWonCoins = 0;
+      });
+    }
+  }
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder:
-          (context) => _buildGameDialog(
-            title:
-                isJackpot
-                    ? 'JACKPOT!'
-                    : isBigWin
-                    ? 'BIG WIN!'
-                    : 'Congratulations!',
-            icon: reward.icon,
-            iconColor: reward.color,
-            content:
-                reward.value > 0
-                    ? 'You won ${reward.label}!\n\nTotal Coins: $_currentCoins'
-                    : 'Better luck next time! Keep spinning for amazing rewards!',
-            buttonText: 'Awesome!',
-            onPressed: () => Navigator.pop(context),
-            isJackpot: isJackpot,
-          ),
-    );
+  double _calculateWheelContainerHeight() {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final screenWidth = MediaQuery.of(context).size.width;
+
+    // For very small screens, use more height for the wheel
+    if (screenHeight < 600) {
+      return screenHeight * 0.6; // 60% of screen height
+    } else if (screenHeight < 700) {
+      return screenHeight * 0.55; // 55% of screen height
+    } else if (screenWidth < 400) {
+      return screenHeight * 0.5; // 50% of screen height
+    } else {
+      return screenHeight * 0.45; // 45% of screen height for larger screens
+    }
+  }
+
+  // 🔧 FIXED: Simplified reward dialog - only ONE congratulations screen
+  void _showRewardDialog(SpinReward reward) {
+    final coinsToAward = reward.value;
+
+    if (coinsToAward > 0) {
+      // 🎯 ONLY show the fancy gold coin animation overlay for coin rewards
+      setState(() {
+        _showGoldCoinAnimation = true;
+        _lastWonCoins = coinsToAward;
+      });
+
+      // Auto-hide after 5 seconds as backup
+      Future.delayed(const Duration(seconds: 5), () {
+        if (mounted) {
+          _dismissWinOverlay();
+        }
+      });
+    } else {
+      // 🎯 ONLY show simple dialog for "Try Again" (no coins)
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder:
+            (context) => _buildGameDialog(
+              title: 'Better Luck Next Time!',
+              icon: reward.icon,
+              iconColor: reward.color,
+              content: 'Keep spinning for amazing rewards!',
+              buttonText: 'Try Again!',
+              onPressed: () => Navigator.pop(context),
+              isJackpot: false,
+            ),
+      );
+    }
   }
 
   Widget _buildGameDialog({
@@ -455,21 +542,39 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       backgroundColor: Colors.transparent,
       body: Stack(
         children: [
-          // Main content
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              children: [
-                // Header with coins and daily spins info
-                _buildHeader(),
-                const SizedBox(height: 20),
+          // Main content - Now scrollable
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              child: Column(
+                children: [
+                  // Header with coins and daily spins info
+                  _buildHeader(),
+                  const SizedBox(height: 30),
 
-                // Enhanced wheel section - ALWAYS SHOWS IMMEDIATELY
-                Expanded(child: Center(child: _buildEnhancedWheel())),
+                  // Enhanced wheel section with responsive sizing
+                  Container(
+                    height: _calculateWheelContainerHeight(),
+                    constraints: BoxConstraints(
+                      minHeight:
+                          MediaQuery.of(context).size.height *
+                          0.4, // 40% of screen height
+                      maxHeight:
+                          MediaQuery.of(context).size.height *
+                          0.6, // 60% of screen height
+                    ),
+                    child: Center(child: _buildEnhancedWheel()),
+                  ),
 
-                // Bottom action section
-                _buildBottomSection(),
-              ],
+                  const SizedBox(height: 30),
+
+                  // Bottom action section
+                  _buildBottomSection(),
+
+                  // Extra padding at bottom for better scrolling
+                  const SizedBox(height: 50),
+                ],
+              ),
             ),
           ),
 
@@ -489,6 +594,82 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
               ],
             ),
           ),
+
+          // 🔧 FIXED: Enhanced lucky wheel win animation overlay - NO DUPLICATE DIALOGS
+          if (_showGoldCoinAnimation)
+            Material(
+              color: Colors.transparent,
+              child: GestureDetector(
+                onTap: _dismissWinOverlay,
+                child: Container(
+                  width: double.infinity,
+                  height: double.infinity,
+                  color: Colors.black.withOpacity(0.3), // Ensure full coverage
+                  child: Stack(
+                    children: [
+                      LuckyWheelWinOverlay(
+                        coinAmount: _lastWonCoins,
+                        prizeTitle:
+                            _lastWonCoins >= 500
+                                ? "🎉 MEGA JACKPOT! 🎉"
+                                : _lastWonCoins >= 100
+                                ? "🎊 BIG WIN! 🎊"
+                                : "🎯 Amazing Win!",
+                        primaryColor:
+                            _lastWonCoins >= 500
+                                ? const Color(0xFFFF1744)
+                                : _lastWonCoins >= 100
+                                ? const Color(0xFFFFD700)
+                                : const Color(0xFFFFA500),
+                        secondaryColor:
+                            _lastWonCoins >= 500
+                                ? const Color(0xFFFFD700)
+                                : _lastWonCoins >= 100
+                                ? const Color(0xFFFFA500)
+                                : const Color(0xFFFF9800),
+                        prizeIcon:
+                            _lastWonCoins >= 500
+                                ? Icons.celebration
+                                : _lastWonCoins >= 100
+                                ? Icons.stars
+                                : Icons.emoji_events,
+                        onComplete: _dismissWinOverlay,
+                      ),
+                      // Tap to continue hint - moved to very bottom
+                      Positioned(
+                        bottom: 20, // Moved to very bottom of screen
+                        left: 0,
+                        right: 0,
+                        child: Center(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.8),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.3),
+                                width: 1,
+                              ),
+                            ),
+                            child: Text(
+                              'Tap anywhere to continue',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -499,13 +680,13 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.white.withOpacity(0.3)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 5),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
@@ -514,7 +695,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           Text(
             'LUCKY WHEEL',
             style: GoogleFonts.luckiestGuy(
-              fontSize: 28,
+              fontSize: MediaQuery.of(context).size.width > 600 ? 28 : 22,
               color: Colors.white,
               shadows: [
                 Shadow(
@@ -530,63 +711,76 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               // Current coins
-              StarCoinCredit(creditAmount: _currentCoins, size: 60),
-              // Daily spins remaining
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'Daily Spins',
-                      style: GoogleFonts.roboto(
-                        fontSize: 12,
-                        color: Colors.white70,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      '${_maxDailySpins - _dailySpinsUsed}/$_maxDailySpins',
-                      style: GoogleFonts.luckiestGuy(
-                        fontSize: 18,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ],
+              Expanded(
+                child: Center(
+                  child: StarCoinCredit(
+                    creditAmount: _currentCoins,
+                    size: MediaQuery.of(context).size.width > 600 ? 60 : 45,
+                  ),
                 ),
               ),
-              // Spin cost
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withOpacity(0.3),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.orange.withOpacity(0.5)),
-                ),
-                child: Column(
-                  children: [
-                    const Icon(
-                      Icons.monetization_on,
-                      color: Colors.orange,
-                      size: 20,
-                    ),
-                    Text(
-                      '10 Coins',
-                      style: GoogleFonts.luckiestGuy(
-                        fontSize: 14,
-                        color: Colors.white,
+              const SizedBox(width: 12),
+              // Daily spins remaining
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Column(
+                    children: [
+                      Text(
+                        'Daily Spins',
+                        style: GoogleFonts.roboto(
+                          fontSize: 10,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
+                      Text(
+                        '${_maxDailySpins - _dailySpinsUsed}/$_maxDailySpins',
+                        style: GoogleFonts.luckiestGuy(
+                          fontSize: 16,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Spin cost
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(
+                        Icons.monetization_on,
+                        color: Colors.orange,
+                        size: 18,
+                      ),
+                      Text(
+                        '10 Coins',
+                        style: GoogleFonts.luckiestGuy(
+                          fontSize: 12,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -597,6 +791,12 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
   }
 
   Widget _buildEnhancedWheel() {
+    // Calculate responsive wheel size based on screen dimensions
+    final screenSize = MediaQuery.of(context).size;
+    final wheelSize = math.min(screenSize.width * 0.8, screenSize.height * 0.4);
+    final wheelSizeConstrained =
+        math.min(wheelSize, 350.0).toDouble(); // Max size for consistency
+
     return Stack(
       alignment: Alignment.center,
       children: [
@@ -605,8 +805,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           animation: _wheelGlowAnimation,
           builder: (context, child) {
             return Container(
-              width: 420,
-              height: 420,
+              width: wheelSizeConstrained + 100, // Glow extends beyond wheel
+              height: wheelSizeConstrained + 100,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -648,8 +848,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           animation: _shineAnimation,
           builder: (context, child) {
             return Container(
-              width: 380,
-              height: 380,
+              width: wheelSizeConstrained + 80,
+              height: wheelSizeConstrained + 80,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 boxShadow: [
@@ -679,8 +879,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
             animation: _particleAnimation,
             builder: (context, child) {
               return SizedBox(
-                width: 350,
-                height: 350,
+                width: wheelSizeConstrained + 50,
+                height: wheelSizeConstrained + 50,
                 child: CustomPaint(
                   painter: ParticlePainter(_particleAnimation.value),
                 ),
@@ -693,8 +893,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           animation: _shineAnimation,
           builder: (context, child) {
             return Container(
-              width: 320,
-              height: 320,
+              width: wheelSizeConstrained + 20,
+              height: wheelSizeConstrained + 20,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: SweepGradient(
@@ -720,10 +920,10 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           animation: _spinAnimation,
           builder: (context, child) {
             return Transform.rotate(
-              angle: _spinAnimation.value * 2 * math.pi,
+              angle: _spinAnimation.value,
               child: Container(
-                width: 300,
-                height: 300,
+                width: wheelSizeConstrained,
+                height: wheelSizeConstrained,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   boxShadow: [
@@ -756,7 +956,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                     _rewards,
                     _imageCache.cachedRewardImages, // Use cached images
                   ),
-                  size: const Size(300, 300),
+                  size: Size(wheelSizeConstrained, wheelSizeConstrained),
                 ),
               ),
             );
@@ -765,8 +965,8 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
 
         // Rim lighting effect
         Container(
-          width: 300,
-          height: 300,
+          width: wheelSizeConstrained,
+          height: wheelSizeConstrained,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             border: Border.all(width: 3, color: Colors.white.withOpacity(0.4)),
@@ -789,9 +989,10 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
               scale: _canSpin && !_isSpinning ? _pulseAnimation.value : 1.0,
               child: GestureDetector(
                 onTap: _spin,
+
                 child: Container(
-                  width: 120,
-                  height: 120,
+                  width: wheelSizeConstrained * 0.4, // 40% of wheel size
+                  height: wheelSizeConstrained * 0.4,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: RadialGradient(
@@ -862,9 +1063,9 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
                           )
                           : Center(
                             child: Text(
-                              'SPIN',
+                              '🎰 SPIN! 🎰',
                               style: GoogleFonts.luckiestGuy(
-                                fontSize: 24,
+                                fontSize: 20,
                                 color: Colors.white,
                                 shadows: [
                                   Shadow(
@@ -890,7 +1091,7 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
         // Enhanced pointer/arrow with better shadow
         Positioned(
           top: 0,
-          child: Container(
+          child: SizedBox(
             width: 50,
             height: 50,
             child: CustomPaint(painter: EnhancedPointerPainter()),
@@ -907,16 +1108,16 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
         children: [
           // Status message
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.white.withOpacity(0.3)),
             ),
             child: Text(
               _getStatusMessage(),
               style: GoogleFonts.roboto(
-                fontSize: 14,
+                fontSize: MediaQuery.of(context).size.width > 600 ? 14 : 12,
                 color: Colors.white,
                 fontWeight: FontWeight.w500,
               ),
@@ -927,25 +1128,54 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
           const SizedBox(height: 16),
 
           // Action buttons row
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              CustomIconButton(
-                icon: Icons.info_outline,
-                color: const Color(0xFF2196F3),
-                onPressed: _showInfoDialog,
-              ),
-              CustomIconButton(
-                icon: Icons.history,
-                color: const Color(0xFF9C27B0),
-                onPressed: _showSpinHistory,
-              ),
-              CustomIconButton(
-                icon: Icons.card_giftcard,
-                color: const Color(0xFFFF9800),
-                onPressed: _showRewards,
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      height: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      child: CustomIconButton(
+                        icon: Icons.info_outline,
+                        color: const Color(0xFF2196F3),
+                        onPressed: _showInfoDialog,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      height: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      child: CustomIconButton(
+                        icon: Icons.history,
+                        color: const Color(0xFF9C27B0),
+                        onPressed: _showSpinHistory,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                Expanded(
+                  child: Center(
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      height: MediaQuery.of(context).size.width > 600 ? 60 : 50,
+                      child: CustomIconButton(
+                        icon: Icons.card_giftcard,
+                        color: const Color(0xFFFF9800),
+                        onPressed: _showRewards,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -954,13 +1184,13 @@ class _EnhancedSpinScreenState extends State<EnhancedSpinScreen>
 
   String _getStatusMessage() {
     if (!_canSpin && !_isSpinning) {
-      return 'Wait a moment before spinning again...';
+      return '⏳ Wait a moment before spinning again...';
     } else if (_dailySpinsUsed >= _maxDailySpins) {
-      return 'Daily limit reached! Come back tomorrow for more spins.';
+      return '🚫 Daily limit reached! Come back tomorrow for more spins!';
     } else if (_currentCoins < 10) {
-      return 'Not enough coins! Play trivia games to earn more.';
+      return '💰 Need more coins! Play trivia games to earn more!';
     } else {
-      return 'Good luck! Spin the wheel to win amazing rewards!';
+      return '🎯 Good luck! Spin the wheel to win amazing rewards! 🎰';
     }
   }
 
@@ -1088,7 +1318,7 @@ class SpinReward {
   ]);
 }
 
-// ⭐ OPTIMIZED WHEEL PAINTER - Shows immediately with fallbacks ⭐
+// ⭐ FIXED WHEEL PAINTER - Precise segment alignment ⭐
 class OptimizedWheelPainter extends CustomPainter {
   final List<SpinReward> rewards;
   final Map<String, ui.Image> availableImages; // Only cached images
@@ -1102,6 +1332,7 @@ class OptimizedWheelPainter extends CustomPainter {
     final sectionAngle = 2 * math.pi / rewards.length;
 
     for (int i = 0; i < rewards.length; i++) {
+      // FIXED: Start from top (-π/2) and go clockwise
       final startAngle = i * sectionAngle - math.pi / 2;
 
       // Bright section gradient with vibrant colors

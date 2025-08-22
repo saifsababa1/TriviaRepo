@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/unified_audio_service.dart';
 
 class BottomNavBar extends StatefulWidget {
   final int currentIndex;
@@ -71,7 +72,7 @@ class _BottomNavBarState extends State<BottomNavBar>
     super.dispose();
   }
 
-  void _onItemPressed(int index) {
+  void _onItemPressed(int index) async {
     setState(() {
       _pressedIndex = index;
     });
@@ -84,6 +85,7 @@ class _BottomNavBarState extends State<BottomNavBar>
     });
 
     HapticFeedback.lightImpact();
+    await UnifiedAudioService().playButtonClick();
     widget.onTap(index);
   }
 
@@ -250,12 +252,13 @@ class _BottomNavBarState extends State<BottomNavBar>
     );
   }
 
-  void _handleSwipe(int direction) {
+  void _handleSwipe(int direction) async {
     int newIndex = widget.currentIndex + direction;
 
     // Check boundaries
     if (newIndex >= 0 && newIndex <= 4) {
       HapticFeedback.lightImpact(); // Haptic feedback for swipe
+      await UnifiedAudioService().playButtonClick();
       widget.onTap(newIndex);
     } else {
       // Boundary reached - provide different haptic feedback

@@ -5,10 +5,11 @@ import 'package:google_fonts/google_fonts.dart';
 import 'screens/app_shell.dart';
 import 'services/game_state_service.dart';
 import 'services/image_cache_service.dart';
+import 'services/unified_audio_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set up system UI first
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -59,12 +60,12 @@ class AppInitializer extends StatefulWidget {
   State<AppInitializer> createState() => _AppInitializerState();
 }
 
-class _AppInitializerState extends State<AppInitializer> 
+class _AppInitializerState extends State<AppInitializer>
     with TickerProviderStateMixin {
   bool _isInitialized = false;
   String _initializationStatus = 'Starting up...';
   double _progress = 0.0;
-  
+
   late AnimationController _logoController;
   late AnimationController _pulseController;
   late Animation<double> _logoScale;
@@ -89,9 +90,10 @@ class _AppInitializerState extends State<AppInitializer>
       CurvedAnimation(parent: _logoController, curve: Curves.elasticOut),
     );
 
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeIn),
-    );
+    _logoOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeIn));
 
     // Pulse animation
     _pulseController = AnimationController(
@@ -125,21 +127,39 @@ class _AppInitializerState extends State<AppInitializer>
         _initializationStatus = 'Loading game data...';
         _progress = 0.2;
       });
-      
+
       await GameStateService().initialize();
       await Future.delayed(const Duration(milliseconds: 300));
 
-      // Step 2: Preload Lucky Wheel Images
+      // Step 2: Initialize Audio Service
+      setState(() {
+        _initializationStatus = 'Loading audio system...';
+        _progress = 0.4;
+      });
+
+      try {
+        await UnifiedAudioService().initialize().timeout(
+          const Duration(seconds: 10),
+          onTimeout: () {
+            // Audio initialization timed out after 10 seconds, continuing...
+          },
+        );
+      } catch (e) {
+        // Audio initialization failed, continuing without audio
+      }
+      await Future.delayed(const Duration(milliseconds: 200));
+
+      // Step 3: Preload Lucky Wheel Images
       setState(() {
         _initializationStatus = 'Loading wheel images...';
-        _progress = 0.5;
+        _progress = 0.6;
       });
 
       final imageCache = ImageCacheService();
       await imageCache.preloadRewardImages();
       await Future.delayed(const Duration(milliseconds: 200));
 
-      // Step 3: Final preparations
+      // Step 4: Final preparations
       setState(() {
         _initializationStatus = 'Preparing game...';
         _progress = 0.8;
@@ -155,30 +175,25 @@ class _AppInitializerState extends State<AppInitializer>
 
       // Show completion for a moment
       await Future.delayed(const Duration(milliseconds: 500));
-      
+
       if (mounted) {
         // Navigate to your existing AllComponentsPreview
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const AllComponentsPreview(),
-          ),
+          MaterialPageRoute(builder: (context) => const AllComponentsPreview()),
         );
       }
-
     } catch (e) {
-      print('❌ Initialization error: $e');
+      // Initialization error
       setState(() {
         _initializationStatus = 'Error occurred, continuing...';
         _progress = 1.0;
       });
-      
+
       // Still navigate even if there were errors
       await Future.delayed(const Duration(seconds: 1));
       if (mounted) {
         Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (context) => const AllComponentsPreview(),
-          ),
+          MaterialPageRoute(builder: (context) => const AllComponentsPreview()),
         );
       }
     }
@@ -211,10 +226,16 @@ class _AppInitializerState extends State<AppInitializer>
 
                   // Animated Logo
                   AnimatedBuilder(
-                    animation: Listenable.merge([_logoScale, _logoOpacity, _pulseAnimation]),
+                    animation: Listenable.merge([
+                      _logoScale,
+                      _logoOpacity,
+                      _pulseAnimation,
+                    ]),
                     builder: (context, child) {
                       return Transform.scale(
-                        scale: _logoScale.value * (_isInitialized ? 1.0 : _pulseAnimation.value),
+                        scale:
+                            _logoScale.value *
+                            (_isInitialized ? 1.0 : _pulseAnimation.value),
                         child: Opacity(
                           opacity: _logoOpacity.value,
                           child: Container(
@@ -236,7 +257,9 @@ class _AppInitializerState extends State<AppInitializer>
                                   offset: const Offset(0, 15),
                                 ),
                                 BoxShadow(
-                                  color: const Color(0xFFFFD700).withOpacity(0.4),
+                                  color: const Color(
+                                    0xFFFFD700,
+                                  ).withOpacity(0.4),
                                   blurRadius: 20,
                                   offset: const Offset(0, 0),
                                 ),
@@ -328,9 +351,9 @@ class _AppInitializerState extends State<AppInitializer>
                           ),
                           textAlign: TextAlign.center,
                         ),
-                        
+
                         const SizedBox(height: 20),
-                        
+
                         // Progress Bar Container
                         Container(
                           height: 12,
@@ -344,16 +367,16 @@ class _AppInitializerState extends State<AppInitializer>
                               value: _progress,
                               backgroundColor: Colors.transparent,
                               valueColor: AlwaysStoppedAnimation<Color>(
-                                _isInitialized 
-                                  ? const Color(0xFF4CAF50)
-                                  : const Color(0xFFFFD700),
+                                _isInitialized
+                                    ? const Color(0xFF4CAF50)
+                                    : const Color(0xFFFFD700),
                               ),
                             ),
                           ),
                         ),
-                        
+
                         const SizedBox(height: 12),
-                        
+
                         // Percentage
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -391,7 +414,10 @@ class _AppInitializerState extends State<AppInitializer>
 
                   // Fun Facts Footer
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 12,
+                    ),
                     decoration: BoxDecoration(
                       color: Colors.black.withOpacity(0.2),
                       borderRadius: BorderRadius.circular(15),

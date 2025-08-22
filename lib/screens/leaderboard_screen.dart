@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/game_state_service.dart';
 import '../models/trivia_question.dart';
-import '../widgets/star_coin.dart';
 
 class LeaderboardScreen extends StatefulWidget {
   const LeaderboardScreen({super.key});
@@ -15,11 +14,38 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     with TickerProviderStateMixin {
   List<GameSession> _topSessions = [];
   bool _isLoading = true;
+  int _selectedTab = 0;
 
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  late AnimationController _tabController;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _tabAnimation;
+
+  final List<String> _tabs = ['Top Scores', 'Recent Games', 'Achievements'];
+
+  // Responsive tab names for smaller screens
+  List<String> _getResponsiveTabs(double screenWidth) {
+    if (screenWidth < 320) {
+      return ['Top', 'Recent', 'Achieve'];
+    } else if (screenWidth < 400) {
+      return ['Top Scores', 'Recent', 'Achieve'];
+    } else {
+      return _tabs;
+    }
+  }
+
+  // Responsive font size based on screen width
+  double _getResponsiveFontSize(double screenWidth) {
+    if (screenWidth < 320) {
+      return 10.0;
+    } else if (screenWidth < 400) {
+      return 11.0;
+    } else {
+      return 12.0;
+    }
+  }
 
   @override
   void initState() {
@@ -39,6 +65,11 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       vsync: this,
     );
 
+    _tabController = AnimationController(
+      duration: const Duration(milliseconds: 300),
+      vsync: this,
+    );
+
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
@@ -48,12 +79,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+
+    _tabAnimation = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _tabController, curve: Curves.easeInOut));
   }
 
   @override
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -82,6 +119,13 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     setState(() {
       _isLoading = false;
     });
+  }
+
+  void _onTabChanged(int index) {
+    setState(() {
+      _selectedTab = index;
+    });
+    _tabController.forward().then((_) => _tabController.reverse());
   }
 
   void _createDemoData() {
@@ -177,10 +221,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     if (_isLoading) {
       return Container(
         decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.center,
-            radius: 1.5,
-            colors: [Color(0xFF9C27B0), Color(0xFF6A1B9A), Color(0xFF4A148C)],
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Color(0xFFB16DFF),
+              Color(0xFF9854FF),
+              Color(0xFF7B3EFF),
+              Color(0xFF5B2CFF),
+            ],
+            stops: [0.0, 0.3, 0.7, 1.0],
           ),
         ),
         child: const Center(
@@ -205,10 +255,16 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
 
     return Container(
       decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 2.0,
-          colors: [Color(0xFF3F51B5), Color(0xFF303F9F), Color(0xFF1A237E)],
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color(0xFFB16DFF),
+            Color(0xFF9854FF),
+            Color(0xFF7B3EFF),
+            Color(0xFF5B2CFF),
+          ],
+          stops: [0.0, 0.3, 0.7, 1.0],
         ),
       ),
       child: FadeTransition(
@@ -217,14 +273,81 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           position: _slideAnimation,
           child: Column(
             children: [
-              // Enhanced Header with Stats
-              _buildHeader(),
+              // Fixed Leaderboard Title
+              _buildLeaderboardTitle(),
 
-              // Top Scores Content
-              Expanded(child: _buildScoresTab()),
+              // Scrollable Content
+              Expanded(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: [
+                      // Enhanced Header with Stats
+                      _buildHeader(),
+
+                      // Tab Bar
+                      _buildTabBar(),
+
+                      // Tab Content
+                      _buildTabContent(),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardTitle() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: const Icon(
+              Icons.emoji_events,
+              color: Colors.white,
+              size: 32,
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Leaderboard',
+                  style: GoogleFonts.luckiestGuy(
+                    fontSize: 24,
+                    color: Colors.white,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black.withOpacity(0.5),
+                        blurRadius: 2,
+                        offset: const Offset(1, 1),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  'Track Your Progress',
+                  style: GoogleFonts.roboto(
+                    fontSize: 14,
+                    color: Colors.white.withOpacity(0.9),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -241,8 +364,10 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
             : 0;
 
     return Container(
-      padding: const EdgeInsets.all(20),
-      margin: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(
+        MediaQuery.of(context).size.width > 600 ? 24 : 20,
+      ),
+      margin: EdgeInsets.all(MediaQuery.of(context).size.width > 600 ? 20 : 16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -258,73 +383,18 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
           ),
         ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(15),
-                ),
-                child: const Icon(
-                  Icons.emoji_events,
-                  color: Colors.white,
-                  size: 32,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Leaderboard',
-                      style: GoogleFonts.luckiestGuy(
-                        fontSize: 24,
-                        color: Colors.white,
-                        shadows: [
-                          Shadow(
-                            color: Colors.black.withOpacity(0.5),
-                            blurRadius: 2,
-                            offset: const Offset(1, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-                    Text(
-                      'Track Your Progress',
-                      style: GoogleFonts.roboto(
-                        fontSize: 14,
-                        color: Colors.white.withOpacity(0.9),
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Expanded(
+            child: _buildStatCard('Games', '$totalGames', Icons.gamepad),
           ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard('Games', '$totalGames', Icons.gamepad),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard('High Score', '$highScore', Icons.star),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _buildStatCard(
-                  'Average',
-                  '$avgScore',
-                  Icons.trending_up,
-                ),
-              ),
-            ],
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('High Score', '$highScore', Icons.star),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: _buildStatCard('Average', '$avgScore', Icons.trending_up),
           ),
         ],
       ),
@@ -359,67 +429,270 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     );
   }
 
-  Widget _buildScoresTab() {
+  Widget _buildTabBar() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final responsiveTabs = _getResponsiveTabs(constraints.maxWidth);
+        final responsiveFontSize = _getResponsiveFontSize(constraints.maxWidth);
+
+        return Container(
+          margin: EdgeInsets.symmetric(
+            horizontal: constraints.maxWidth < 400 ? 8 : 16,
+            vertical: constraints.maxHeight < 700 ? 8 : 12,
+          ),
+          padding: const EdgeInsets.all(4),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: const Color(0xFF6366F1).withOpacity(0.3),
+              width: 1.5,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.4),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: LayoutBuilder(
+            builder: (context, innerConstraints) {
+              final availableWidth = innerConstraints.maxWidth - 8;
+              final tabWidth = availableWidth / responsiveTabs.length;
+
+              return SizedBox(
+                height: 48,
+                child: Stack(
+                  children: [
+                    // Animated sliding indicator
+                    AnimatedPositioned(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      left: _selectedTab * tabWidth + 2,
+                      top: 2,
+                      bottom: 2,
+                      width: tabWidth - 4,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                          ),
+                          borderRadius: BorderRadius.circular(24),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF6366F1).withOpacity(0.6),
+                              blurRadius: 15,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    // Tab buttons
+                    Row(
+                      children:
+                          responsiveTabs.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final tab = entry.value;
+                            final isSelected = _selectedTab == index;
+
+                            return Expanded(
+                              child: Material(
+                                color: Colors.transparent,
+                                child: InkWell(
+                                  onTap: () => _onTabChanged(index),
+                                  borderRadius: BorderRadius.circular(24),
+                                  child: Container(
+                                    height: 48,
+                                    alignment: Alignment.center,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal:
+                                          constraints.maxWidth < 400 ? 4 : 8,
+                                      vertical: 10,
+                                    ),
+                                    child: Text(
+                                      tab,
+                                      textAlign: TextAlign.center,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: GoogleFonts.poppins(
+                                        color:
+                                            isSelected
+                                                ? Colors.white
+                                                : const Color(0xFF64748B),
+                                        fontWeight:
+                                            isSelected
+                                                ? FontWeight.w600
+                                                : FontWeight.w500,
+                                        fontSize: responsiveFontSize,
+                                        letterSpacing: isSelected ? 0.2 : 0.1,
+                                        height: 1.0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildTabContent() {
+    switch (_selectedTab) {
+      case 0:
+        return _buildTopScoresTab();
+      case 1:
+        return _buildRecentGamesTab();
+      case 2:
+        return _buildAchievementsTab();
+      default:
+        return _buildTopScoresTab();
+    }
+  }
+
+  Widget _buildTopScoresTab() {
     if (_topSessions.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.emoji_events_outlined,
-                size: 80,
-                color: Colors.white.withOpacity(0.5),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              'No Games Yet!',
-              style: GoogleFonts.luckiestGuy(fontSize: 24, color: Colors.white),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Play trivia games to see your scores here',
-              style: GoogleFonts.roboto(fontSize: 16, color: Colors.white70),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton.icon(
-              onPressed: () {
-                // Navigate to trivia or refresh
-                _loadLeaderboardData();
-              },
-              icon: const Icon(Icons.refresh),
-              label: const Text('Refresh'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFFFD700),
-                foregroundColor: const Color(0xFF1A237E),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 12,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildEmptyState();
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: _topSessions.length,
-      itemBuilder: (context, index) {
-        final session = _topSessions[index];
-        return _buildScoreCard(session, index + 1);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          ...List.generate(_topSessions.length, (index) {
+            final session = _topSessions[index];
+            return _buildScoreCard(session, index + 1);
+          }),
+          // Extra padding at bottom for better scrolling
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentGamesTab() {
+    final recentGames = _topSessions.take(5).toList();
+
+    if (recentGames.isEmpty) {
+      return _buildEmptyState();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          ...List.generate(recentGames.length, (index) {
+            final session = recentGames[index];
+            return _buildRecentGameCard(session);
+          }),
+          // Extra padding at bottom for better scrolling
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAchievementsTab() {
+    final achievements = [
+      {
+        'title': 'Score Master',
+        'description': 'Reach 1000+ points in a single game',
+        'icon': Icons.star_rounded,
+        'color': const Color(0xFFFFD700),
+        'isUnlocked': true,
       },
+      {
+        'title': 'Perfect Streak',
+        'description': 'Answer 10 questions correctly in a row',
+        'icon': Icons.local_fire_department_rounded,
+        'color': const Color(0xFFFF5722),
+        'isUnlocked': false,
+      },
+      {
+        'title': 'Quick Thinker',
+        'description': 'Answer 5 questions in under 30 seconds',
+        'icon': Icons.flash_on_rounded,
+        'color': const Color(0xFF2196F3),
+        'isUnlocked': true,
+      },
+    ];
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          ...List.generate(achievements.length, (index) {
+            final achievement = achievements[index];
+            return _buildAchievementCard(
+              achievement['title'] as String,
+              achievement['description'] as String,
+              achievement['icon'] as IconData,
+              achievement['color'] as Color,
+              achievement['isUnlocked'] as bool,
+            );
+          }),
+          // Extra padding at bottom for better scrolling
+          const SizedBox(height: 50),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(
+              Icons.emoji_events_outlined,
+              size: 80,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'No Games Yet!',
+            style: GoogleFonts.luckiestGuy(fontSize: 24, color: Colors.white),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Play trivia games to see your scores here',
+            style: GoogleFonts.roboto(fontSize: 16, color: Colors.white70),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () {
+              _loadLeaderboardData();
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Refresh'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD700),
+              foregroundColor: const Color(0xFF1A237E),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(25),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -637,5 +910,240 @@ class _LeaderboardScreenState extends State<LeaderboardScreen>
     } else {
       return '${date.day}/${date.month}/${date.year}';
     }
+  }
+
+  Widget _buildRecentGameCard(GameSession session) {
+    final accuracy = session.accuracy;
+    final correctAnswers = session.userAnswers.where((a) => a.isCorrect).length;
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF8B5CF6).withOpacity(0.3),
+            const Color(0xFF6366F1).withOpacity(0.2),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            // Score display
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '${session.totalScore} POINTS',
+                    style: GoogleFonts.luckiestGuy(
+                      color: Colors.white,
+                      fontSize: 20,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF2196F3).withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          '${session.questionsAnswered} Q',
+                          style: GoogleFonts.roboto(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.check_circle,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${(accuracy * 100).toStringAsFixed(0)}%',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.local_fire_department,
+                              color: Colors.white,
+                              size: 12,
+                            ),
+                            const SizedBox(width: 4),
+                            Text(
+                              '${session.streak}',
+                              style: GoogleFonts.roboto(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            // Date
+            Text(
+              _formatDate(session.endTime ?? session.startTime),
+              style: GoogleFonts.roboto(
+                color: Colors.white.withOpacity(0.7),
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAchievementCard(
+    String title,
+    String description,
+    IconData icon,
+    Color color,
+    bool isUnlocked,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors:
+              isUnlocked
+                  ? [color.withOpacity(0.3), color.withOpacity(0.1)]
+                  : [
+                    Colors.grey.withOpacity(0.2),
+                    Colors.grey.withOpacity(0.1),
+                  ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color:
+              isUnlocked
+                  ? color.withOpacity(0.5)
+                  : Colors.grey.withOpacity(0.3),
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color:
+                isUnlocked
+                    ? color.withOpacity(0.2)
+                    : Colors.black.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                color:
+                    isUnlocked
+                        ? color.withOpacity(0.2)
+                        : Colors.grey.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                icon,
+                color: isUnlocked ? color : Colors.grey,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.luckiestGuy(
+                      color: isUnlocked ? Colors.white : Colors.grey,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    description,
+                    style: GoogleFonts.roboto(
+                      color: isUnlocked ? Colors.white70 : Colors.grey,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              isUnlocked ? Icons.check_circle : Icons.lock,
+              color: isUnlocked ? Colors.green : Colors.grey,
+              size: 20,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

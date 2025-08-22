@@ -1,6 +1,7 @@
+// lib/screens/settings_screen.dart
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:flutter/services.dart';
+import '../services/unified_audio_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,15 +14,16 @@ class _SettingsScreenState extends State<SettingsScreen>
     with TickerProviderStateMixin {
   late AnimationController _fadeController;
   late AnimationController _slideController;
+  late AnimationController _pulseController;
+
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;
+  late Animation<double> _pulseAnimation;
 
   // Settings state
   bool _backgroundMusicEnabled = true;
   bool _soundEffectsEnabled = true;
-  bool _vibrationsEnabled = true;
   bool _notificationsEnabled = true;
-  bool _darkModeEnabled = false;
   double _musicVolume = 0.7;
   double _effectsVolume = 0.8;
   String _selectedLanguage = 'English';
@@ -33,6 +35,9 @@ class _SettingsScreenState extends State<SettingsScreen>
     'French',
     'German',
     'Italian',
+    'Portuguese',
+    'Chinese',
+    'Japanese',
   ];
   final List<String> _difficulties = ['Easy', 'Medium', 'Hard', 'Expert'];
 
@@ -41,126 +46,231 @@ class _SettingsScreenState extends State<SettingsScreen>
     super.initState();
     _initializeAnimations();
     _loadSettings();
-
-    _fadeController.forward();
-    _slideController.forward();
+    _startAnimations();
   }
 
   void _initializeAnimations() {
     _fadeController = AnimationController(
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1200),
       vsync: this,
     );
 
     _slideController = AnimationController(
-      duration: const Duration(milliseconds: 600),
+      duration: const Duration(milliseconds: 800),
       vsync: this,
     );
 
-    _fadeAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(parent: _fadeController, curve: Curves.easeOut));
+    _pulseController = AnimationController(
+      duration: const Duration(milliseconds: 2000),
+      vsync: this,
+    );
+
+    _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeOutCubic),
+    );
 
     _slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.3),
+      begin: const Offset(0, 0.5),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _slideController, curve: Curves.easeOut));
+    ).animate(
+      CurvedAnimation(parent: _slideController, curve: Curves.elasticOut),
+    );
+
+    _pulseAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  void _startAnimations() {
+    _fadeController.forward();
+    _slideController.forward();
+    _pulseController.repeat(reverse: true);
   }
 
   void _loadSettings() {
-    // In a real app, load from SharedPreferences or similar
+    // Load from Audio Service
+    final audioService = UnifiedAudioService();
     setState(() {
-      _backgroundMusicEnabled = true;
-      _soundEffectsEnabled = true;
-      _vibrationsEnabled = true;
+      _backgroundMusicEnabled = audioService.backgroundMusicEnabled;
+      _soundEffectsEnabled = audioService.soundEffectsEnabled;
+      _musicVolume = audioService.musicVolume;
+      _effectsVolume = audioService.effectsVolume;
       _notificationsEnabled = true;
-      _darkModeEnabled = false;
-      _musicVolume = 0.7;
-      _effectsVolume = 0.8;
       _selectedLanguage = 'English';
       _selectedDifficulty = 'Medium';
     });
   }
 
-  void _saveSettings() {
-    // In a real app, save to SharedPreferences or similar
-    HapticFeedback.lightImpact();
+  void _saveSettings() async {
+    // Save to Audio Service
+    final audioService = UnifiedAudioService();
+    await audioService.updateBackgroundMusicEnabled(_backgroundMusicEnabled);
+    await audioService.updateSoundEffectsEnabled(_soundEffectsEnabled);
+    await audioService.updateMusicVolume(_musicVolume);
+    await audioService.updateEffectsVolume(_effectsVolume);
 
+    // Add save animation
+    _showSuccessSnackBar();
+  }
+
+  void _showSuccessSnackBar() {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          'Settings saved successfully! ✅',
-          style: GoogleFonts.roboto(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+        content: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(Icons.check, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'Settings Saved!',
+                      style: GoogleFonts.luckiestGuy(
+                        color: Colors.white,
+                        fontSize: 16,
+                      ),
+                    ),
+                    Text(
+                      'Your preferences have been updated',
+                      style: GoogleFonts.luckiestGuy(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
-        backgroundColor: Colors.green,
+        backgroundColor: const Color(0xFF4CAF50),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        duration: const Duration(seconds: 2),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(16),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
 
   void _resetSettings() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
+    showDialog(context: context, builder: (context) => _buildResetDialog());
+  }
+
+  Widget _buildResetDialog() {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 16,
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFF6B35), Color(0xFFFF8F00)],
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.warning_rounded,
+                color: Colors.white,
+                size: 40,
+              ),
             ),
-            title: Row(
+            const SizedBox(height: 20),
+            Text(
+              'Reset All Settings?',
+              style: GoogleFonts.luckiestGuy(fontSize: 20, color: Colors.white),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'This will restore all settings to their default values. This action cannot be undone.',
+              style: GoogleFonts.luckiestGuy(
+                fontSize: 14,
+                color: Colors.white.withOpacity(0.9),
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Row(
               children: [
-                const Icon(Icons.warning, color: Colors.orange),
-                const SizedBox(width: 8),
-                Text(
-                  'Reset Settings',
-                  style: GoogleFonts.luckiestGuy(fontSize: 18),
+                Expanded(
+                  child: _buildDialogButton(
+                    'Cancel',
+                    Colors.white.withOpacity(0.2),
+                    Colors.white,
+                    () => Navigator.pop(context),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildDialogButton(
+                    'Reset',
+                    Colors.white,
+                    const Color(0xFFFF6B35),
+                    () {
+                      setState(() {
+                        _backgroundMusicEnabled = true;
+                        _soundEffectsEnabled = true;
+                        _notificationsEnabled = true;
+                        _musicVolume = 0.7;
+                        _effectsVolume = 0.8;
+                        _selectedLanguage = 'English';
+                        _selectedDifficulty = 'Medium';
+                      });
+                      Navigator.pop(context);
+                      _saveSettings();
+                    },
+                  ),
                 ),
               ],
             ),
-            content: Text(
-              'Are you sure you want to reset all settings to default?',
-              style: GoogleFonts.roboto(fontSize: 14),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text(
-                  'Cancel',
-                  style: GoogleFonts.roboto(color: Colors.grey[600]),
-                ),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  setState(() {
-                    _backgroundMusicEnabled = true;
-                    _soundEffectsEnabled = true;
-                    _vibrationsEnabled = true;
-                    _notificationsEnabled = true;
-                    _darkModeEnabled = false;
-                    _musicVolume = 0.7;
-                    _effectsVolume = 0.8;
-                    _selectedLanguage = 'English';
-                    _selectedDifficulty = 'Medium';
-                  });
-                  Navigator.pop(context);
-                  _saveSettings();
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: const Text('Reset'),
-              ),
-            ],
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogButton(
+    String text,
+    Color bgColor,
+    Color textColor,
+    VoidCallback onPressed,
+  ) {
+    return ElevatedButton(
+      onPressed: onPressed,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: bgColor,
+        foregroundColor: textColor,
+        elevation: 0,
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+      child: Text(
+        text,
+        style: GoogleFonts.luckiestGuy(fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -168,45 +278,36 @@ class _SettingsScreenState extends State<SettingsScreen>
   void dispose() {
     _fadeController.dispose();
     _slideController.dispose();
+    _pulseController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment.topCenter,
-          radius: 2.0,
-          colors: [Color(0xFF9C27B0), Color(0xFF7B1FA2), Color(0xFF4A148C)],
-        ),
-      ),
-      child: FadeTransition(
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      body: FadeTransition(
         opacity: _fadeAnimation,
         child: SlideTransition(
           position: _slideAnimation,
-          child: Column(
-            children: [
-              _buildHeader(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      _buildAudioSection(),
-                      const SizedBox(height: 16),
-                      _buildGameplaySection(),
-                      const SizedBox(height: 16),
-                      _buildDisplaySection(),
-                      const SizedBox(height: 16),
-                      _buildNotificationSection(),
-                      const SizedBox(height: 24),
-                      _buildActionButtons(),
-                    ],
-                  ),
-                ),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  _buildHeader(),
+                  const SizedBox(height: 20),
+                  _buildAudioSection(),
+                  const SizedBox(height: 20),
+                  _buildGameplaySection(),
+                  const SizedBox(height: 20),
+                  _buildNotificationSection(),
+                  const SizedBox(height: 32),
+                  _buildActionButtons(),
+                  const SizedBox(height: 20),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -215,55 +316,81 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildHeader() {
     return Container(
-      padding: const EdgeInsets.all(20),
       margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
+        borderRadius: BorderRadius.circular(24),
+        gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFE1BEE7), Color(0xFFCE93D8), Color(0xFFBA68C8)],
+          colors: [
+            Colors.white.withOpacity(0.25),
+            Colors.white.withOpacity(0.15),
+          ],
         ),
-        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
           ),
         ],
       ),
       child: Row(
         children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: const Icon(Icons.settings, color: Colors.white, size: 32),
+          AnimatedBuilder(
+            animation: _pulseAnimation,
+            builder: (context, child) {
+              return Transform.scale(
+                scale: _pulseAnimation.value,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                    ),
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF667eea).withOpacity(0.4),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.settings,
+                    color: Colors.white,
+                    size: 32,
+                  ),
+                ),
+              );
+            },
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 20),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Game Settings',
+                  'Settings',
                   style: GoogleFonts.luckiestGuy(
-                    fontSize: 24,
+                    fontSize: 28,
                     color: Colors.white,
                     shadows: [
                       Shadow(
-                        color: Colors.black.withOpacity(0.5),
-                        blurRadius: 2,
-                        offset: const Offset(1, 1),
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 4,
+                        offset: const Offset(2, 2),
                       ),
                     ],
                   ),
                 ),
+                const SizedBox(height: 4),
                 Text(
                   'Customize your gaming experience',
-                  style: GoogleFonts.roboto(
+                  style: GoogleFonts.luckiestGuy(
                     fontSize: 14,
                     color: Colors.white.withOpacity(0.9),
                     fontWeight: FontWeight.w500,
@@ -281,20 +408,51 @@ class _SettingsScreenState extends State<SettingsScreen>
     required String title,
     required IconData icon,
     required List<Widget> children,
+    required Color accentColor,
   }) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.2), width: 1),
+        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.white.withOpacity(0.2),
+            Colors.white.withOpacity(0.1),
+          ],
+        ),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 15,
+            offset: const Offset(0, 5),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(icon, color: Colors.white, size: 24),
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [accentColor, accentColor.withOpacity(0.8)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: accentColor.withOpacity(0.4),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
               const SizedBox(width: 12),
               Text(
                 title,
@@ -305,7 +463,7 @@ class _SettingsScreenState extends State<SettingsScreen>
               ),
             ],
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           ...children,
         ],
       ),
@@ -314,53 +472,56 @@ class _SettingsScreenState extends State<SettingsScreen>
 
   Widget _buildAudioSection() {
     return _buildSettingsCard(
-      title: 'Audio Settings',
-      icon: Icons.volume_up,
+      title: 'Audio & Sound',
+      icon: Icons.volume_up_rounded,
+      accentColor: const Color(0xFF4CAF50),
       children: [
-        _buildSwitchTile(
+        _buildEnhancedSwitchTile(
           title: 'Background Music',
-          subtitle: 'Play ambient music during gameplay',
+          subtitle: 'Immersive ambient music during gameplay',
           value: _backgroundMusicEnabled,
-          onChanged: (value) {
-            setState(() {
-              _backgroundMusicEnabled = value;
-            });
-            HapticFeedback.lightImpact();
+          icon: Icons.music_note,
+          onChanged: (value) async {
+            setState(() => _backgroundMusicEnabled = value);
+            await UnifiedAudioService().updateBackgroundMusicEnabled(value);
           },
         ),
-        const SizedBox(height: 8),
         if (_backgroundMusicEnabled) ...[
-          _buildSliderTile(
+          const SizedBox(height: 16),
+          _buildEnhancedSliderTile(
             title: 'Music Volume',
+            subtitle: 'Adjust background music level',
             value: _musicVolume,
-            onChanged: (value) {
-              setState(() {
-                _musicVolume = value;
-              });
+            icon: Icons.music_note,
+            color: const Color(0xFF4CAF50),
+            onChanged: (value) async {
+              setState(() => _musicVolume = value);
+              await UnifiedAudioService().updateMusicVolume(value);
             },
           ),
-          const SizedBox(height: 8),
         ],
-        _buildSwitchTile(
+        const SizedBox(height: 16),
+        _buildEnhancedSwitchTile(
           title: 'Sound Effects',
           subtitle: 'Button clicks, correct/wrong sounds',
           value: _soundEffectsEnabled,
-          onChanged: (value) {
-            setState(() {
-              _soundEffectsEnabled = value;
-            });
-            HapticFeedback.lightImpact();
+          icon: Icons.speaker,
+          onChanged: (value) async {
+            setState(() => _soundEffectsEnabled = value);
+            await UnifiedAudioService().updateSoundEffectsEnabled(value);
           },
         ),
-        const SizedBox(height: 8),
         if (_soundEffectsEnabled) ...[
-          _buildSliderTile(
+          const SizedBox(height: 16),
+          _buildEnhancedSliderTile(
             title: 'Effects Volume',
+            subtitle: 'Adjust sound effects level',
             value: _effectsVolume,
-            onChanged: (value) {
-              setState(() {
-                _effectsVolume = value;
-              });
+            icon: Icons.speaker,
+            color: const Color(0xFF2196F3),
+            onChanged: (value) async {
+              setState(() => _effectsVolume = value);
+              await UnifiedAudioService().updateEffectsVolume(value);
             },
           ),
         ],
@@ -371,61 +532,28 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildGameplaySection() {
     return _buildSettingsCard(
       title: 'Gameplay',
-      icon: Icons.games,
+      icon: Icons.games_rounded,
+      accentColor: const Color(0xFF9C27B0),
       children: [
-        _buildDropdownTile(
+        _buildEnhancedDropdownTile(
           title: 'Default Difficulty',
+          subtitle: 'Starting difficulty for new games',
           value: _selectedDifficulty,
           items: _difficulties,
+          icon: Icons.bar_chart,
           onChanged: (value) {
-            setState(() {
-              _selectedDifficulty = value!;
-            });
-            HapticFeedback.lightImpact();
+            setState(() => _selectedDifficulty = value!);
           },
         ),
         const SizedBox(height: 16),
-        _buildDropdownTile(
+        _buildEnhancedDropdownTile(
           title: 'Language',
+          subtitle: 'Interface and question language',
           value: _selectedLanguage,
           items: _languages,
+          icon: Icons.language,
           onChanged: (value) {
-            setState(() {
-              _selectedLanguage = value!;
-            });
-            HapticFeedback.lightImpact();
-          },
-        ),
-        const SizedBox(height: 16),
-        _buildSwitchTile(
-          title: 'Vibrations',
-          subtitle: 'Haptic feedback for interactions',
-          value: _vibrationsEnabled,
-          onChanged: (value) {
-            setState(() {
-              _vibrationsEnabled = value;
-            });
-            if (value) HapticFeedback.mediumImpact();
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDisplaySection() {
-    return _buildSettingsCard(
-      title: 'Display',
-      icon: Icons.display_settings,
-      children: [
-        _buildSwitchTile(
-          title: 'Dark Mode',
-          subtitle: 'Switch to dark theme (coming soon)',
-          value: _darkModeEnabled,
-          onChanged: (value) {
-            setState(() {
-              _darkModeEnabled = value;
-            });
-            HapticFeedback.lightImpact();
+            setState(() => _selectedLanguage = value!);
           },
         ),
       ],
@@ -435,205 +563,330 @@ class _SettingsScreenState extends State<SettingsScreen>
   Widget _buildNotificationSection() {
     return _buildSettingsCard(
       title: 'Notifications',
-      icon: Icons.notifications,
+      icon: Icons.notifications_rounded,
+      accentColor: const Color(0xFFE91E63),
       children: [
-        _buildSwitchTile(
+        _buildEnhancedSwitchTile(
           title: 'Push Notifications',
-          subtitle: 'Get notified about daily challenges',
+          subtitle: 'Daily challenges and achievements',
           value: _notificationsEnabled,
+          icon: Icons.notification_important,
           onChanged: (value) {
-            setState(() {
-              _notificationsEnabled = value;
-            });
-            HapticFeedback.lightImpact();
+            setState(() => _notificationsEnabled = value);
           },
         ),
       ],
     );
   }
 
-  Widget _buildSwitchTile({
+  Widget _buildEnhancedSwitchTile({
     required String title,
     required String subtitle,
     required bool value,
+    required IconData icon,
     required ValueChanged<bool> onChanged,
   }) {
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: Colors.white, size: 20),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.luckiestGuy(
+                    fontSize: 16,
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  subtitle,
+                  style: GoogleFonts.luckiestGuy(
+                    fontSize: 12,
+                    color: Colors.white.withOpacity(0.7),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Switch(
+            value: value,
+            onChanged: onChanged,
+            activeColor: const Color(0xFFFFD700),
+            activeTrackColor: const Color(0xFFFFD700).withOpacity(0.3),
+            inactiveThumbColor: Colors.white.withOpacity(0.8),
+            inactiveTrackColor: Colors.white.withOpacity(0.3),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedSliderTile({
+    required String title,
+    required String subtitle,
+    required double value,
+    required IconData icon,
+    required Color color,
+    required ValueChanged<double> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Text(
-                title,
-                style: GoogleFonts.roboto(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.luckiestGuy(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.luckiestGuy(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 2),
-              Text(
-                subtitle,
-                style: GoogleFonts.roboto(
-                  fontSize: 12,
-                  color: Colors.white.withOpacity(0.7),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${(value * 100).round()}%',
+                  style: GoogleFonts.luckiestGuy(
+                    fontSize: 14,
+                    color: color,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
             ],
           ),
-        ),
-        Switch(
-          value: value,
-          onChanged: onChanged,
-          activeColor: const Color(0xFFFFD700),
-          activeTrackColor: const Color(0xFFFFD700).withOpacity(0.3),
-          inactiveThumbColor: Colors.grey[300],
-          inactiveTrackColor: Colors.grey[600],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSliderTile({
-    required String title,
-    required double value,
-    required ValueChanged<double> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.9),
-                fontWeight: FontWeight.w500,
-              ),
+          const SizedBox(height: 12),
+          SliderTheme(
+            data: SliderTheme.of(context).copyWith(
+              activeTrackColor: color,
+              inactiveTrackColor: Colors.white.withOpacity(0.3),
+              thumbColor: color,
+              overlayColor: color.withOpacity(0.3),
+              thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 8),
+              trackHeight: 4,
             ),
-            Text(
-              '${(value * 100).round()}%',
-              style: GoogleFonts.roboto(
-                fontSize: 14,
-                color: Colors.white.withOpacity(0.9),
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ],
-        ),
-        SliderTheme(
-          data: SliderTheme.of(context).copyWith(
-            activeTrackColor: const Color(0xFFFFD700),
-            inactiveTrackColor: Colors.white.withOpacity(0.3),
-            thumbColor: const Color(0xFFFFD700),
-            overlayColor: const Color(0xFFFFD700).withOpacity(0.3),
-          ),
-          child: Slider(
-            value: value,
-            onChanged: onChanged,
-            min: 0.0,
-            max: 1.0,
-            divisions: 10,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildDropdownTile({
-    required String title,
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: GoogleFonts.roboto(
-            fontSize: 16,
-            color: Colors.white,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        const SizedBox(height: 8),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: Colors.white.withOpacity(0.3), width: 1),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
+            child: Slider(
               value: value,
               onChanged: onChanged,
-              isExpanded: true,
-              dropdownColor: const Color(0xFF7B1FA2),
-              style: GoogleFonts.roboto(fontSize: 14, color: Colors.white),
-              items:
-                  items.map((item) {
-                    return DropdownMenuItem<String>(
-                      value: item,
-                      child: Text(item),
-                    );
-                  }).toList(),
+              min: 0.0,
+              max: 1.0,
+              divisions: 10,
             ),
           ),
-        ),
-      ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEnhancedDropdownTile({
+    required String title,
+    required String subtitle,
+    required String value,
+    required List<String> items,
+    required IconData icon,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.white.withOpacity(0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: GoogleFonts.luckiestGuy(
+                        fontSize: 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: GoogleFonts.luckiestGuy(
+                        fontSize: 12,
+                        color: Colors.white.withOpacity(0.7),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.15),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.white.withOpacity(0.3)),
+            ),
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: value,
+                onChanged: onChanged,
+                isExpanded: true,
+                dropdownColor: const Color(0xFF764ba2),
+                style: GoogleFonts.luckiestGuy(
+                  fontSize: 14,
+                  color: Colors.white,
+                ),
+                icon: const Icon(Icons.arrow_drop_down, color: Colors.white),
+                items:
+                    items.map((item) {
+                      return DropdownMenuItem<String>(
+                        value: item,
+                        child: Text(item),
+                      );
+                    }).toList(),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildActionButtons() {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _resetSettings,
-            icon: const Icon(Icons.restore, color: Colors.white),
-            label: Text(
-              'Reset',
-              style: GoogleFonts.roboto(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionButton(
+                'Reset All',
+                Icons.restore_rounded,
+                const Color(0xFFFF6B35),
+                _resetSettings,
               ),
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildActionButton(
+                'Save Settings',
+                Icons.save_rounded,
+                const Color(0xFF4CAF50),
+                _saveSettings,
               ),
             ),
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ElevatedButton.icon(
-            onPressed: _saveSettings,
-            icon: const Icon(Icons.save, color: Colors.white),
-            label: Text(
-              'Save',
-              style: GoogleFonts.roboto(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-          ),
+          ],
         ),
       ],
+    );
+  }
+
+  Widget _buildActionButton(
+    String text,
+    IconData icon,
+    Color color,
+    VoidCallback onPressed,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.4),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon, color: Colors.white),
+        label: Text(
+          text,
+          style: GoogleFonts.luckiestGuy(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          elevation: 0,
+        ),
+      ),
     );
   }
 }

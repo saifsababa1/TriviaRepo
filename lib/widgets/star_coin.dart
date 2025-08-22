@@ -48,7 +48,7 @@ class StarCoinCredit extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: SizedBox(
         width: size,
         height: size,
         child: Stack(
@@ -339,13 +339,6 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                     _totalCredits += 100; // Large smooth increase
                   });
                 },
-                child: Text(
-                  'Big Win +100',
-                  style: GoogleFonts.luckiestGuy(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFFFFD700),
                   padding: const EdgeInsets.symmetric(
@@ -354,6 +347,13 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Big Win +100',
+                  style: GoogleFonts.luckiestGuy(
+                    color: Colors.white,
+                    fontSize: 12,
                   ),
                 ),
               ),
@@ -371,13 +371,6 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                           });
                         }
                         : null,
-                child: Text(
-                  'Big Spend -50',
-                  style: GoogleFonts.luckiestGuy(
-                    color: Colors.white,
-                    fontSize: 12,
-                  ),
-                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor:
                       _totalCredits >= 50
@@ -389,6 +382,13 @@ class _GameCreditSystemState extends State<GameCreditSystem> {
                   ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+                child: Text(
+                  'Big Spend -50',
+                  style: GoogleFonts.luckiestGuy(
+                    color: Colors.white,
+                    fontSize: 12,
                   ),
                 ),
               ),

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../services/game_state_service.dart';
 import '../widgets/star_coin.dart';
 
 class GiftCard {
@@ -48,6 +47,28 @@ class _AwardsScreenState extends State<AwardsScreen>
     'Shopping',
     'Entertainment',
   ];
+
+  // Responsive category names for smaller screens
+  List<String> _getResponsiveCategories(double screenWidth) {
+    if (screenWidth < 320) {
+      return ['All', 'Game', 'Shop', 'Enter'];
+    } else if (screenWidth < 400) {
+      return ['All Cards', 'Gaming', 'Shopping', 'Enter'];
+    } else {
+      return _categories;
+    }
+  }
+
+  // Responsive font size based on screen width
+  double _getResponsiveFontSize(double screenWidth) {
+    if (screenWidth < 320) {
+      return 10.0;
+    } else if (screenWidth < 400) {
+      return 11.0;
+    } else {
+      return 12.0;
+    }
+  }
 
   late List<GiftCard> _giftCards;
 
@@ -292,47 +313,135 @@ class _AwardsScreenState extends State<AwardsScreen>
   Widget _buildCategoryTabs() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children:
-            _categories.asMap().entries.map((entry) {
-              final index = entry.key;
-              final category = entry.value;
+      height: 56,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        physics: const BouncingScrollPhysics(),
+        child: Row(
+          children:
+              _categories.asMap().entries.map((entry) {
+                final index = entry.key;
+                final category = entry.value;
+                final isSelected = _selectedCategory == index;
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _selectedCategory = index),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    decoration: BoxDecoration(
-                      color:
-                          _selectedCategory == index
-                              ? Colors.white
-                              : Colors.transparent,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      category,
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.roboto(
-                        color:
-                            _selectedCategory == index
-                                ? const Color(0xFFE65100)
-                                : Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
+                return Container(
+                  margin: EdgeInsets.only(
+                    left: index == 0 ? 0 : 8,
+                    right: index == _categories.length - 1 ? 16 : 0,
+                  ),
+                  child: Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      onTap: () => setState(() => _selectedCategory = index),
+                      borderRadius: BorderRadius.circular(28),
+                      splashColor: const Color(0xFFE65100).withOpacity(0.2),
+                      highlightColor: const Color(0xFFFF8F00).withOpacity(0.1),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOutCubic,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          gradient:
+                              isSelected
+                                  ? const LinearGradient(
+                                    begin: Alignment.topLeft,
+                                    end: Alignment.bottomRight,
+                                    colors: [
+                                      Color(0xFFFF6B35),
+                                      Color(0xFFFF8F00),
+                                      Color(0xFFE65100),
+                                    ],
+                                  )
+                                  : null,
+                          color:
+                              isSelected
+                                  ? null
+                                  : Colors.white.withOpacity(0.15),
+                          borderRadius: BorderRadius.circular(28),
+                          border: Border.all(
+                            color:
+                                isSelected
+                                    ? Colors.white.withOpacity(0.3)
+                                    : Colors.white.withOpacity(0.2),
+                            width: 1.5,
+                          ),
+                          boxShadow:
+                              isSelected
+                                  ? [
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFE65100,
+                                      ).withOpacity(0.4),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                    BoxShadow(
+                                      color: const Color(
+                                        0xFFFF8F00,
+                                      ).withOpacity(0.2),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 0),
+                                    ),
+                                  ]
+                                  : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Category icon
+                            Icon(
+                              _getCategoryIcon(category),
+                              color: isSelected ? Colors.white : Colors.white70,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 8),
+                            // Category text
+                            Text(
+                              category,
+                              style: GoogleFonts.roboto(
+                                color: isSelected ? Colors.white : Colors.white,
+                                fontWeight:
+                                    isSelected
+                                        ? FontWeight.w600
+                                        : FontWeight.w500,
+                                fontSize: 14,
+                                letterSpacing: isSelected ? 0.2 : 0.1,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-              );
-            }).toList(),
+                );
+              }).toList(),
+        ),
       ),
     );
+  }
+
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'all cards':
+        return Icons.all_inclusive;
+      case 'gaming':
+        return Icons.sports_esports;
+      case 'shopping':
+        return Icons.shopping_bag;
+      case 'entertainment':
+        return Icons.movie;
+      default:
+        return Icons.category;
+    }
   }
 
   Widget _buildGiftCardsGrid() {
@@ -581,7 +690,7 @@ class _AwardsScreenState extends State<AwardsScreen>
                             child: Column(
                               children: [
                                 Text(
-                                  '\$${amount}',
+                                  '\$$amount',
                                   style: GoogleFonts.roboto(
                                     fontSize: 14,
                                     fontWeight: FontWeight.bold,
@@ -668,7 +777,7 @@ class _AwardsScreenState extends State<AwardsScreen>
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'You bought a \$${amount} ${card.title} gift card!',
+                    'You bought a \$$amount ${card.title} gift card!',
                     style: GoogleFonts.roboto(
                       fontSize: 14,
                       color: Colors.black54,

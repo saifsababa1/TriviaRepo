@@ -4,12 +4,12 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../widgets/star_coin.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../services/unified_audio_service.dart';
 import 'home_screen.dart';
-import 'trivia_screen.dart';
 import 'leaderboard_screen.dart';
 import 'enhanced_spin_screen.dart';
 import 'settings_screen.dart';
-import 'awards_screen.dart';
+import 'awards_screen_new.dart';
 
 class AllComponentsPreview extends StatefulWidget {
   const AllComponentsPreview({super.key});
@@ -86,7 +86,7 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
           message,
           style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
-        backgroundColor: Colors.deepPurple.withOpacity(0.9),
+        backgroundColor: Colors.deepPurple.withValues(alpha: 0.9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         duration: const Duration(milliseconds: 1500),
@@ -94,24 +94,27 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     );
   }
 
-  void _onPlayPressed() {
+  void _onPlayPressed() async {
     setState(() {
       _playCount++;
     });
+    await UnifiedAudioService().playButtonClick();
     _showSnackBar('🎮 Play button clicked! (${_playCount}x)');
   }
 
-  void _onNextPressed() {
+  void _onNextPressed() async {
     setState(() {
       _nextCount++;
     });
+    await UnifiedAudioService().playButtonClick();
     _showSnackBar('⏭️ Next button clicked! (${_nextCount}x)');
   }
 
-  void _onContinuePressed() {
+  void _onContinuePressed() async {
     setState(() {
       _continueCount++;
     });
+    await UnifiedAudioService().playButtonClick();
     _showSnackBar('▶️ Continue button clicked! (${_continueCount}x)');
   }
 
@@ -166,9 +169,16 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
               child:
                   _currentNavIndex == 0
                       ? _buildPageContent() // Full screen for spin
-                      : SingleChildScrollView(
-                        padding: const EdgeInsets.all(16.0),
-                        child: _buildNonSpinContent(),
+                      : Column(
+                        children: [
+                          // Header content
+                          Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: _buildHeaderContent(),
+                          ),
+                          // Page content that takes remaining space
+                          Expanded(child: _buildPageContent()),
+                        ],
                       ),
             ),
           ),
@@ -281,8 +291,8 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
     }
   }
 
-  // Helper method to build non-spin content with proper layout
-  Widget _buildNonSpinContent() {
+  // Helper method to build header content (page indicator and title)
+  Widget _buildHeaderContent() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.center,
       children: [
@@ -294,20 +304,20 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [
-                _getPageColor().withOpacity(0.3),
-                _getPageColor().withOpacity(0.15),
+                _getPageColor().withValues(alpha: 0.3),
+                _getPageColor().withValues(alpha: 0.15),
               ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
             borderRadius: BorderRadius.circular(25),
             border: Border.all(
-              color: _getPageColor().withOpacity(0.4),
+              color: _getPageColor().withValues(alpha: 0.4),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: _getPageColor().withOpacity(0.2),
+                color: _getPageColor().withValues(alpha: 0.2),
                 blurRadius: 8,
                 offset: const Offset(0, 4),
               ),
@@ -336,7 +346,7 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
                     color: _getPageColor(),
                     shadows: [
                       Shadow(
-                        color: Colors.black.withOpacity(0.3),
+                        color: Colors.black.withValues(alpha: 0.3),
                         blurRadius: 2,
                         offset: const Offset(1, 1),
                       ),
@@ -348,7 +358,7 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Animated title with page-specific content
         AnimatedSwitcher(
@@ -361,7 +371,7 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
               color: Colors.white,
               shadows: [
                 Shadow(
-                  color: Colors.black.withOpacity(0.5),
+                  color: Colors.black.withValues(alpha: 0.5),
                   blurRadius: 3,
                   offset: const Offset(2, 2),
                 ),
@@ -371,15 +381,25 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
           ),
         ),
 
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
 
         // Star Credits System (always visible for Home only)
         if (_currentNavIndex == 2) const GameCreditSystem(),
-        if (_currentNavIndex == 2) const SizedBox(height: 32),
+        if (_currentNavIndex == 2) const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  // Helper method to build non-spin content with proper layout
+  Widget _buildNonSpinContent() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        // Header content
+        _buildHeaderContent(),
 
         // Mobile-like sliding page content
-        SizedBox(
-          height: 500,
+        Expanded(
           child: Stack(
             children: [
               // Current page content
@@ -407,13 +427,11 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
             ],
           ),
         ),
-
-        const SizedBox(height: 100), // Space for bottom nav
       ],
     );
   }
 
-  void _handlePageTransition(int newIndex) {
+  void _handlePageTransition(int newIndex) async {
     // Prevent multiple transitions
     if (_pageSlideController.isAnimating) return;
 
@@ -467,6 +485,9 @@ class _AllComponentsPreviewState extends State<AllComponentsPreview>
 
     // Add haptic feedback
     HapticFeedback.lightImpact();
+
+    // Play navigation sound effect
+    await UnifiedAudioService().playButtonClick();
 
     // Start the smooth transition
     _pageSlideController.forward().then((_) {
